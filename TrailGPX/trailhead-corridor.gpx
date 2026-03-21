@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<gpx version="1.1" creator="Trailforks.com" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">
+<metadata>
+<name>Trailhead Corridor Trailforks Trail</name>
+<link href="https://www.trailforks.com/">
+<text>Trailforks</text>
+</link>
+</metadata>
+<trk>
+<name>
+Trailhead Corridor
+</name>
+<trkseg>
+<trkpt lat="25.89365" lon="-80.28009">
+<ele>1</ele>
+<time>2026-03-20T03:57:40-07:00</time>
+</trkpt>
+<trkpt lat="25.89342" lon="-80.27988">
+<ele>1</ele>
+<time>2026-03-20T03:57:41-07:00</time>
+</trkpt>
+<trkpt lat="25.89321" lon="-80.27966">
+<ele>1</ele>
+<time>2026-03-20T03:57:42-07:00</time>
+</trkpt>
+<trkpt lat="25.89306" lon="-80.2795">
+<ele>1</ele>
+<time>2026-03-20T03:57:43-07:00</time>
+</trkpt>
+<trkpt lat="25.89296" lon="-80.27941">
+<ele>1</ele>
+<time>2026-03-20T03:57:44-07:00</time>
+</trkpt>
+<trkpt lat="25.89284" lon="-80.27929">
+<ele>1</ele>
+<time>2026-03-20T03:57:45-07:00</time>
+</trkpt>
+<trkpt lat="25.89272" lon="-80.27915">
+<ele>1</ele>
+<time>2026-03-20T03:57:46-07:00</time>
+</trkpt>
+<trkpt lat="25.8924" lon="-80.2788">
+<ele>1</ele>
+<time>2026-03-20T03:57:47-07:00</time>
+</trkpt>
+<trkpt lat="25.89215" lon="-80.27854">
+<ele>1</ele>
+<time>2026-03-20T03:57:48-07:00</time>
+</trkpt>
+<trkpt lat="25.89204" lon="-80.27843">
+<ele>1</ele>
+<time>2026-03-20T03:57:49-07:00</time>
+</trkpt>
+<trkpt lat="25.89193" lon="-80.27836">
+<ele>1</ele>
+<time>2026-03-20T03:57:50-07:00</time>
+</trkpt>
+<trkpt lat="25.89179" lon="-80.27831">
+<ele>1</ele>
+<time>2026-03-20T03:57:51-07:00</time>
+</trkpt>
+<trkpt lat="25.89166" lon="-80.27832">
+<ele>1</ele>
+<time>2026-03-20T03:57:52-07:00</time>
+</trkpt>
+</trkseg>
+</trk>
+</gpx>

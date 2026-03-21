@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(cp:*)",
+      "Bash(open:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(xcrun:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(xcrun devicectl:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npm:*)",
+      "WebFetch(*)",
+      "WebSearch"
+    ]
+  }
+}

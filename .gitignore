@@ -1,0 +1,23 @@
+# Firebase config (contains API keys)
+GoogleService-Info.plist
+
+# Xcode
+*.xcuserstate
+*.xcuserdatad/
+DerivedData/
+build/
+
+# macOS
+.DS_Store
+
+# CocoaPods / SPM
+Pods/
+.build/
+
+# Secrets
+*.env
+*.pem
+*.p12
+
+# Superpowers brainstorm server files
+.superpowers/

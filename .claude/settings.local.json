@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(cp:*)",
+      "Bash(open:*)",
+      "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build)",
+      "Bash(xcrun simctl:*)",
+      "WebFetch(domain:www.trailforks.com)",
+      "WebFetch(domain:www.mtbproject.com)",
+      "WebFetch(domain:www.singletracks.com)",
+      "WebSearch",
+      "WebFetch(domain:stokedmtb.com)",
+      "WebFetch(domain:mtbmiami.com)",
+      "WebFetch(domain:www.alltrails.com)",
+      "WebFetch(domain:www.miamidade.gov)",
+      "Bash(xcodebuild -list)",
+      "Bash(xcodebuild -project TrailRider.xcodeproj -scheme \"TrailRiderWatch Watch App\" -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 \\(46mm\\)' build)",
+      "Bash(xcrun devicectl:*)",
+      "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -destination 'id=3450C83D-765A-5AA2-BFEF-117BAD3BE24D' build)",
+      "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -destination 'platform=iOS,name=Michel''''s iPhone' build)",
+      "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -showdestinations)",
+      "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -destination 'id=00008140-001C15403C6B001C' build)",
+      "Bash(npm list:*)",
+      "Bash(npx firebase:*)"
+    ]
+  }
+}
