@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 struct ActiveRideView: View {
     @Bindable var rideVM: RideViewModel
@@ -28,6 +29,12 @@ struct ActiveRideView: View {
         }
         .ignoresSafeArea()
         .toolbar(.hidden, for: .tabBar)
+        .task {
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
     }
 
     // MARK: - Map Layer
@@ -45,6 +52,7 @@ struct ActiveRideView: View {
             ? .imagery(elevation: .realistic)
             : .standard(elevation: .realistic, emphasis: .muted))
         .mapControls {
+            MapUserLocationButton()
             MapCompass()
         }
     }
@@ -81,7 +89,14 @@ struct ActiveRideView: View {
                         .font(.system(size: 20, weight: .heavy, design: .rounded))
                         .foregroundStyle(.trRideHR)
                         .contentTransition(.numericText())
+                    if rideVM.hrZone > 0 {
+                        Text("Z\(rideVM.hrZone)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.trRideHR.opacity(0.7))
+                    }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(Int(rideVM.heartRate)) beats per minute, \(rideVM.hrZoneName)")
             }
         } else if !rideVM.isWatchConnected {
             RideOverlayBadge(borderColor: .trRideLabel) {
@@ -102,19 +117,21 @@ struct ActiveRideView: View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 rideVM.mapStyleSelection = rideVM.mapStyleSelection == .satellite
-                    ? .topographic : .satellite
+                    ? .standard : .satellite
             }
         } label: {
             RideOverlayBadge(borderColor: .trRideTrail) {
                 Image(systemName: rideVM.mapStyleSelection == .satellite
-                    ? "mountain.2.fill" : "globe.americas.fill")
+                    ? "map.fill" : "globe.americas.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.trRideTrail)
                     .contentTransition(.symbolEffect(.replace))
+                    .frame(minWidth: 28, minHeight: 28)
             }
         }
         .accessibilityLabel(rideVM.mapStyleSelection == .satellite
-            ? "Switch to topographic map" : "Switch to satellite map")
+            ? "Switch to standard map" : "Switch to satellite map")
+        .accessibilityValue(rideVM.mapStyleSelection == .satellite ? "Satellite" : "Standard")
     }
 
     // MARK: - Bottom Panel
@@ -189,7 +206,7 @@ struct ActiveRideView: View {
                 .foregroundStyle(color)
                 .contentTransition(.numericText())
             Text(label)
-                .font(.system(size: 7, weight: .heavy))
+                .font(.caption2.weight(.heavy))
                 .foregroundStyle(.trRideLabel)
                 .tracking(2)
         }

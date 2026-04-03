@@ -29,7 +29,7 @@ extension Color {
     static let trRideElevation = Color(red: 0xFF/255, green: 0x88/255, blue: 0x00/255)       // #FF8800
     static let trRideHR = Color(red: 0xE0/255, green: 0x7A/255, blue: 0x5F/255)              // #E07A5F (same as trDestructive)
     static let trRideStone = Color(red: 0x9B/255, green: 0x9B/255, blue: 0x88/255)           // #9B9B88
-    static let trRideLabel = Color(red: 0x3a/255, green: 0x40/255, blue: 0x30/255)           // #3a4030
+    static let trRideLabel = Color(red: 0x5a/255, green: 0x62/255, blue: 0x50/255)           // #5a6250
 }
 
 extension ShapeStyle where Self == Color {

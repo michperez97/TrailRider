@@ -2,7 +2,6 @@ import Foundation
 import CoreLocation
 import MapKit
 import SwiftUI
-import UIKit
 import FirebaseFirestore
 
 @Observable
@@ -17,8 +16,8 @@ final class RideViewModel {
     }
 
     enum MapStyle: String, CaseIterable {
+        case standard
         case satellite
-        case topographic
     }
 
     // MARK: - State
@@ -35,7 +34,7 @@ final class RideViewModel {
     var elevationGainFeet: Double = 0
     var routeCoordinates: [CLLocationCoordinate2D] = []
     var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
-    var mapStyleSelection: MapStyle = .satellite
+    var mapStyleSelection: MapStyle = .standard
 
     // MARK: - Heart Rate (from Watch)
     var heartRate: Double = 0
@@ -44,7 +43,6 @@ final class RideViewModel {
     var hrZoneName: String = "--"
     var activeCalories: Double = 0
     var isWatchConnected: Bool = false
-    var keepScreenOn: Bool = true
 
     // MARK: - Private
 
@@ -93,7 +91,6 @@ final class RideViewModel {
     // MARK: - Controls
 
     func startRide() {
-        if keepScreenOn { UIApplication.shared.isIdleTimerDisabled = true }
         locationService.requestAlwaysPermission()
         locationService.startTracking()
 
@@ -134,7 +131,6 @@ final class RideViewModel {
     }
 
     func stopRide(userId: String?) {
-        UIApplication.shared.isIdleTimerDisabled = false
         stopTimer()
         locationService.stopTracking()
 
@@ -176,7 +172,6 @@ final class RideViewModel {
     }
 
     func discardRide() {
-        UIApplication.shared.isIdleTimerDisabled = false
         stopTimer()
         locationService.stopTracking()
         resetRide()
@@ -276,6 +271,5 @@ final class RideViewModel {
         lastElevation = nil
         pausedDuration = 0
         pauseStartTime = nil
-        UIApplication.shared.isIdleTimerDisabled = false
     }
 }
