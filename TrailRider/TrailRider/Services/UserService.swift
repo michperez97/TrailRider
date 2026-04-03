@@ -42,7 +42,7 @@ final class UserService: Sendable {
         let usernameRef = db.collection("usernames").document(username.lowercased())
         let userRef = usersCollection.document(userId)
 
-        try await db.runTransaction { transaction, errorPointer in
+        _ = try await db.runTransaction { transaction, errorPointer in
             let doc: DocumentSnapshot
             do {
                 doc = try transaction.getDocument(usernameRef)

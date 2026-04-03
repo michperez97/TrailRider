@@ -123,7 +123,7 @@ final class CommunityTrailService: Sendable {
             .collection("confirmations").document(userId)
         let trailRef = trailsCollection.document(trailId)
 
-        try await db.runTransaction { transaction, errorPointer in
+        _ = try await db.runTransaction { transaction, errorPointer in
             let confirmDoc: DocumentSnapshot
             do {
                 confirmDoc = try transaction.getDocument(confirmationRef)
