@@ -18,6 +18,18 @@ extension Color {
     static let trSurfaceDarker = Color(red: 0x18/255, green: 0x2A/255, blue: 0x1C/255)
     static let trSurfaceLighter = Color(red: 0x24/255, green: 0x3D/255, blue: 0x28/255)
     static let trPrimaryDarker = Color(red: 0x40/255, green: 0x91/255, blue: 0x6C/255)
+
+    // Ride Mode — High-Vis Accents
+    static let trRideBase = Color(red: 0x0a/255, green: 0x0c/255, blue: 0x09/255)           // #0a0c09
+    static let trRideBaseLighter = Color(red: 0x0d/255, green: 0x10/255, blue: 0x0c/255)     // #0d100c
+    static let trRideSurface = Color(red: 0x11/255, green: 0x13/255, blue: 0x10/255)         // #111310
+    static let trRideBorder = Color(red: 0x1e/255, green: 0x24/255, blue: 0x18/255)          // #1e2418
+    static let trRideTrail = Color(red: 0x00/255, green: 0xFF/255, blue: 0x88/255)           // #00FF88
+    static let trRideSpeed = Color(red: 0xD4/255, green: 0xA5/255, blue: 0x74/255)           // #D4A574 (same as trAccent)
+    static let trRideElevation = Color(red: 0xFF/255, green: 0x88/255, blue: 0x00/255)       // #FF8800
+    static let trRideHR = Color(red: 0xE0/255, green: 0x7A/255, blue: 0x5F/255)              // #E07A5F (same as trDestructive)
+    static let trRideStone = Color(red: 0x9B/255, green: 0x9B/255, blue: 0x88/255)           // #9B9B88
+    static let trRideLabel = Color(red: 0x3a/255, green: 0x40/255, blue: 0x30/255)           // #3a4030
 }
 
 extension ShapeStyle where Self == Color {
@@ -35,4 +47,14 @@ extension ShapeStyle where Self == Color {
     static var trSurfaceDarker: Color { .trSurfaceDarker }
     static var trSurfaceLighter: Color { .trSurfaceLighter }
     static var trPrimaryDarker: Color { .trPrimaryDarker }
+    static var trRideBase: Color { .trRideBase }
+    static var trRideBaseLighter: Color { .trRideBaseLighter }
+    static var trRideSurface: Color { .trRideSurface }
+    static var trRideBorder: Color { .trRideBorder }
+    static var trRideTrail: Color { .trRideTrail }
+    static var trRideSpeed: Color { .trRideSpeed }
+    static var trRideElevation: Color { .trRideElevation }
+    static var trRideHR: Color { .trRideHR }
+    static var trRideStone: Color { .trRideStone }
+    static var trRideLabel: Color { .trRideLabel }
 }
