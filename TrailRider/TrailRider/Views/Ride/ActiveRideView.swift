@@ -26,6 +26,29 @@ struct ActiveRideView: View {
 
                 Spacer()
 
+                // Ghost delta badge
+                if rideVM.isGhostActive {
+                    Button {
+                        rideVM.dismissGhost()
+                    } label: {
+                        RideOverlayBadge(borderColor: .trRideSpeed) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "figure.run")
+                                    .font(.caption)
+                                    .foregroundStyle(.trRideSpeed)
+                                Text(rideVM.ghostDelta.isEmpty ? "--" : rideVM.ghostDelta)
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.trRideSpeed)
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.trRideLabel)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 8)
+                    .padding(.horizontal, 14)
+                }
+
                 bottomPanel
             }
         }
@@ -49,6 +72,16 @@ struct ActiveRideView: View {
                     .stroke(.trRideTrail, lineWidth: 4)
             }
             UserAnnotation()
+
+            // Ghost rider dot
+            if rideVM.isGhostActive, let ghostCoord = rideVM.ghostCoordinate {
+                Annotation("Ghost", coordinate: ghostCoord) {
+                    Circle()
+                        .fill(Color.trRideSpeed.opacity(0.6))
+                        .frame(width: 12, height: 12)
+                        .shadow(color: .trRideSpeed.opacity(0.4), radius: 6)
+                }
+            }
         }
         .mapStyle(rideVM.mapStyleSelection == .satellite
             ? .imagery(elevation: .realistic)

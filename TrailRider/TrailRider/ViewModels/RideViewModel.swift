@@ -39,6 +39,13 @@ final class RideViewModel {
     var elevationGainFeet: Double = 0
     var routeCoordinates: [CLLocationCoordinate2D] = []
     var recordedRoutePoints: [Ride.RoutePoint] = []
+
+    // MARK: - Ghost Ride
+    var ghostPoints: [Ride.RoutePoint]?
+    var ghostCurrentIndex: Int = 0
+    var ghostDelta: String = ""
+    var isGhostActive: Bool { ghostPoints != nil }
+
     var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     var mapStyleSelection: MapStyle = .standard
     var zoomLevel: ZoomLevel = .normal
@@ -267,6 +274,7 @@ final class RideViewModel {
         }
         updateStats()
         updateHeartRate()
+        updateGhost()
     }
 
     // MARK: - Stats Calculation
@@ -416,6 +424,78 @@ final class RideViewModel {
         }
     }
 
+    // MARK: - Ghost Ride
+
+    var ghostCoordinate: CLLocationCoordinate2D? {
+        guard let points = ghostPoints, ghostCurrentIndex < points.count else { return nil }
+        let pt = points[ghostCurrentIndex]
+        return CLLocationCoordinate2D(latitude: pt.latitude, longitude: pt.longitude)
+    }
+
+    func loadGhost(from ride: Ride) {
+        if let points = ride.routePoints, !points.isEmpty {
+            ghostPoints = points
+        } else {
+            // Interpolate from routePolyline for legacy rides
+            let geoPoints = ride.routePolyline
+            let count = geoPoints.count
+            let duration = Double(ride.durationSeconds)
+            ghostPoints = geoPoints.enumerated().map { index, gp in
+                let t = count > 1 ? (duration * Double(index) / Double(count - 1)) : 0
+                return Ride.RoutePoint(
+                    latitude: gp.latitude,
+                    longitude: gp.longitude,
+                    altitude: 0,
+                    timestamp: t,
+                    speed: ride.avgSpeedMph,
+                    heartRate: nil
+                )
+            }
+        }
+        ghostCurrentIndex = 0
+        ghostDelta = ""
+    }
+
+    func dismissGhost() {
+        ghostPoints = nil
+        ghostCurrentIndex = 0
+        ghostDelta = ""
+    }
+
+    private func updateGhost() {
+        guard let points = ghostPoints else { return }
+        guard !points.isEmpty else { return }
+
+        let elapsed = Double(elapsedSeconds)
+
+        // Advance ghost index to match elapsed time
+        while ghostCurrentIndex < points.count - 1 && points[ghostCurrentIndex + 1].timestamp <= elapsed {
+            ghostCurrentIndex += 1
+        }
+
+        // Calculate distance delta between rider and ghost
+        guard let location = locationService.currentLocation else { return }
+        let ghostPt = points[ghostCurrentIndex]
+        let ghostLoc = CLLocation(latitude: ghostPt.latitude, longitude: ghostPt.longitude)
+        let deltaMeters = location.distance(from: ghostLoc)
+        let deltaFeet = deltaMeters * 3.28084
+
+        // Determine if rider is ahead or behind based on timestamps
+        let ghostTimestamp = points[ghostCurrentIndex].timestamp
+        if elapsed > ghostTimestamp + 1 {
+            ghostDelta = String(format: "%.0f ft ahead", deltaFeet)
+        } else if elapsed < ghostTimestamp - 1 {
+            ghostDelta = String(format: "%.0f ft behind", deltaFeet)
+        } else {
+            // Compare by distance traveled
+            if deltaFeet < 10 {
+                ghostDelta = "Even"
+            } else {
+                ghostDelta = String(format: "%.0f ft", deltaFeet)
+            }
+        }
+    }
+
     private func resetRide() {
         rideState = .idle
         elapsedSeconds = 0
@@ -426,6 +506,9 @@ final class RideViewModel {
         elevationGainFeet = 0
         routeCoordinates = []
         recordedRoutePoints = []
+        ghostPoints = nil
+        ghostCurrentIndex = 0
+        ghostDelta = ""
         lastLocation = nil
         lastElevation = nil
         pausedDuration = 0
