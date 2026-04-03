@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import MapKit
 import CoreLocation
+import FirebaseFirestore
 
 @Observable
 @MainActor
@@ -179,7 +180,8 @@ final class RideReplayViewModel {
     private func startTimer() {
         stopTimer()
         let t = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.tick()
             }
         }

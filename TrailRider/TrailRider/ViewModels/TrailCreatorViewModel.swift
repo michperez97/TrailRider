@@ -204,7 +204,8 @@ final class TrailCreatorViewModel {
 
     private func startTimer() {
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.tick()
             }
         }
