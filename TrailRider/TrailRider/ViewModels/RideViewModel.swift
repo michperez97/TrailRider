@@ -16,6 +16,11 @@ final class RideViewModel {
         case summary
     }
 
+    enum MapStyle: String, CaseIterable {
+        case satellite
+        case topographic
+    }
+
     // MARK: - State
 
     var rideState: RideState = .idle
@@ -30,6 +35,7 @@ final class RideViewModel {
     var elevationGainFeet: Double = 0
     var routeCoordinates: [CLLocationCoordinate2D] = []
     var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    var mapStyleSelection: MapStyle = .satellite
 
     // MARK: - Heart Rate (from Watch)
     var heartRate: Double = 0
