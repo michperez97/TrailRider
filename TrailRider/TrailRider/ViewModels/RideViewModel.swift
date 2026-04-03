@@ -38,6 +38,7 @@ final class RideViewModel {
     var avgSpeedMph: Double = 0
     var elevationGainFeet: Double = 0
     var routeCoordinates: [CLLocationCoordinate2D] = []
+    var recordedRoutePoints: [Ride.RoutePoint] = []
     var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     var mapStyleSelection: MapStyle = .standard
     var zoomLevel: ZoomLevel = .normal
@@ -129,6 +130,7 @@ final class RideViewModel {
         avgSpeedMph = 0
         elevationGainFeet = 0
         routeCoordinates = []
+        recordedRoutePoints = []
         lastLocation = nil
         lastElevation = nil
         pausedDuration = 0
@@ -178,7 +180,8 @@ final class RideViewModel {
                 routePolyline: routeCoordinates.map {
                     GeoPoint(latitude: $0.latitude, longitude: $0.longitude)
                 },
-                photoURLs: []
+                photoURLs: [],
+                routePoints: recordedRoutePoints
             )
             savedRide = ride
 
@@ -288,10 +291,26 @@ final class RideViewModel {
             if deltaMeters > 2 && deltaMeters < 100 {
                 distanceMiles += deltaMeters / 1609.344
                 routeCoordinates.append(location.coordinate)
+                recordedRoutePoints.append(Ride.RoutePoint(
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    altitude: location.altitude,
+                    timestamp: Double(elapsedSeconds),
+                    speed: currentSpeedMph,
+                    heartRate: heartRate > 0 ? heartRate : nil
+                ))
             }
         } else {
             // First point
             routeCoordinates.append(location.coordinate)
+            recordedRoutePoints.append(Ride.RoutePoint(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude,
+                altitude: location.altitude,
+                timestamp: Double(elapsedSeconds),
+                speed: currentSpeedMph,
+                heartRate: heartRate > 0 ? heartRate : nil
+            ))
         }
 
         // Calculate elevation gain
@@ -406,6 +425,7 @@ final class RideViewModel {
         avgSpeedMph = 0
         elevationGainFeet = 0
         routeCoordinates = []
+        recordedRoutePoints = []
         lastLocation = nil
         lastElevation = nil
         pausedDuration = 0

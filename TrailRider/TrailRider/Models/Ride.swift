@@ -21,4 +21,15 @@ struct Ride: Codable, Identifiable, Sendable {
     enum TrailCondition: String, Codable, Sendable {
         case dry, muddy, flooded, damaged
     }
+
+    struct RoutePoint: Codable, Sendable {
+        let latitude: Double
+        let longitude: Double
+        let altitude: Double
+        let timestamp: Double
+        let speed: Double
+        let heartRate: Double?
+    }
+
+    var routePoints: [RoutePoint]?
 }
