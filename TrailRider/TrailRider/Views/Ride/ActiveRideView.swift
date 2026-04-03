@@ -83,9 +83,14 @@ struct ActiveRideView: View {
                 }
             }
         }
-        .mapStyle(rideVM.mapStyleSelection == .satellite
-            ? .imagery(elevation: .realistic)
-            : .standard(elevation: .realistic, emphasis: .muted))
+        .mapStyle({
+            let isCloseUp = rideVM.zoomLevel == .closeUp
+            if rideVM.mapStyleSelection == .satellite {
+                return .imagery(elevation: isCloseUp ? .flat : .realistic)
+            } else {
+                return .standard(elevation: isCloseUp ? .flat : .realistic, emphasis: .muted)
+            }
+        }())
         .mapControls {
             MapCompass()
         }
