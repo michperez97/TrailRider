@@ -48,6 +48,18 @@ struct RideDetailView: View {
                     ThemeStatCard(title: "Elevation", value: String(format: "%.0f ft", ride.elevationGainFeet), icon: "mountain.2.fill", animationDelay: 0.4)
                 }
                 .padding(.horizontal)
+
+                    if coordinates.count > 1 {
+                        NavigationLink(destination: RideReplayView(ride: ride)) {
+                            HStack {
+                                Image(systemName: "play.circle.fill")
+                                Text("Replay Ride")
+                                    .font(.headline)
+                            }
+                        }
+                        .buttonStyle(.trailPrimary)
+                        .padding(.horizontal)
+                    }
             }
             .padding(.vertical)
         }
