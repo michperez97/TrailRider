@@ -98,14 +98,14 @@ final class CommunityTrailsViewModel {
     }
 
     /// Approve a pending edit, applying its changes to the trail.
-    func approveEdit(trailId: String, edit: TrailEdit) async {
+    func approveEdit(trailId: String, edit: TrailEdit, userId: String) async {
         guard let editId = edit.id else { return }
         do {
             try await trailService.approveEdit(
                 trailId: trailId,
                 editId: editId,
                 changes: edit.changes,
-                reviewerId: edit.reviewedBy ?? ""
+                reviewerId: userId
             )
             message = "Edit approved."
         } catch {
@@ -114,13 +114,13 @@ final class CommunityTrailsViewModel {
     }
 
     /// Reject a pending edit.
-    func rejectEdit(trailId: String, edit: TrailEdit) async {
+    func rejectEdit(trailId: String, edit: TrailEdit, userId: String) async {
         guard let editId = edit.id else { return }
         do {
             try await trailService.rejectEdit(
                 trailId: trailId,
                 editId: editId,
-                reviewerId: edit.reviewedBy ?? ""
+                reviewerId: userId
             )
             message = "Edit rejected."
         } catch {

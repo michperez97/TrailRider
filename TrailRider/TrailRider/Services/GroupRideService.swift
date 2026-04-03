@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseAuth
 import FirebaseFirestore
 
 final class GroupRideService: Sendable {
@@ -36,7 +37,7 @@ final class GroupRideService: Sendable {
             memberIds: [hostId],
             createdAt: Date()
         )
-        let ref = try sessionsCollection.addDocument(from: session)
+        let ref = try await sessionsCollection.addDocument(from: session)
         session.id = ref.documentID
 
         let member = SessionMember(
@@ -50,7 +51,7 @@ final class GroupRideService: Sendable {
             isReady: true,
             shareLocation: host.shareLocation
         )
-        try membersCollection(sessionId: ref.documentID).document(hostId).setData(from: member)
+        try await membersCollection(sessionId: ref.documentID).document(hostId).setData(from: member)
 
         return session
     }
@@ -86,11 +87,18 @@ final class GroupRideService: Sendable {
             isReady: false,
             shareLocation: user.shareLocation
         )
-        try membersCollection(sessionId: sessionId).document(userId).setData(from: member)
+        try await membersCollection(sessionId: sessionId).document(userId).setData(from: member)
     }
 
     /// Start the session (host only)
     func startSession(sessionId: String) async throws {
+        guard let currentUid = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "GroupRideService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+        let doc = try await sessionsCollection.document(sessionId).getDocument()
+        guard let hostId = doc.data()?["hostId"] as? String, hostId == currentUid else {
+            throw NSError(domain: "GroupRideService", code: 403, userInfo: [NSLocalizedDescriptionKey: "Only the host can start the session"])
+        }
         try await sessionsCollection.document(sessionId).updateData(["status": "active"])
     }
 

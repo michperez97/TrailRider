@@ -72,12 +72,14 @@ struct SocialView: View {
                         Image(systemName: "person.badge.plus")
                     }
                     .tint(.trAccent)
+                    .accessibilityLabel("Add friend")
                 }
             }
             .sheet(isPresented: $showAddFriend) {
                 AddFriendView(friendsVM: friendsVM)
             }
             .task {
+                guard friendsVM.friends.isEmpty && friendsVM.pendingRequests.isEmpty else { return }
                 if let userId = authViewModel.currentUser?.id {
                     await friendsVM.loadFriends(userId: userId)
                 }
@@ -118,6 +120,7 @@ struct FriendRequestRow: View {
                     .foregroundStyle(.trPrimary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Accept friend request")
 
             Button {
                 onDecline()
@@ -127,6 +130,7 @@ struct FriendRequestRow: View {
                     .foregroundStyle(.trDestructive)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Decline friend request")
         }
     }
 }

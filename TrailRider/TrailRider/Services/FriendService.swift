@@ -86,13 +86,21 @@ final class FriendService: Sendable {
 
     /// Check if a request already exists between two users
     func requestExists(fromUserId: String, toUserId: String) async throws -> Bool {
-        let snapshot = try await requestsCollection
+        let forward = try await requestsCollection
             .whereField("fromUserId", isEqualTo: fromUserId)
             .whereField("toUserId", isEqualTo: toUserId)
             .whereField("status", isEqualTo: "pending")
             .limit(to: 1)
             .getDocuments()
-        return !snapshot.documents.isEmpty
+        if !forward.documents.isEmpty { return true }
+
+        let reverse = try await requestsCollection
+            .whereField("fromUserId", isEqualTo: toUserId)
+            .whereField("toUserId", isEqualTo: fromUserId)
+            .whereField("status", isEqualTo: "pending")
+            .limit(to: 1)
+            .getDocuments()
+        return !reverse.documents.isEmpty
     }
 
     // MARK: - Friends List

@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: anyone authenticated can read (for friend search/profiles),
+    // only the owner can write their own document
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Username reservations: used for atomic username claiming
+    match /usernames/{username} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Rides: only the owner can read, create, or delete their rides
+    match /rides/{rideId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Friend requests: sender can create, recipient can update (accept/decline),
+    // both parties can read
+    match /friendRequests/{reqId} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == resource.data.fromUserId
+                   || request.auth.uid == resource.data.toUserId);
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.fromUserId;
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.toUserId;
+      allow delete: if false;
+    }
+
+    // Friendships: owner can read and delete their own friendship row
+    match /friendships/{fId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && (request.resource.data.userId == request.auth.uid
+                     || request.resource.data.friendId == request.auth.uid);
+      allow update: if false;
+    }
+
+    // Group sessions: authenticated users can read (to join by code),
+    // host creates, members update
+    match /groupSessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.hostId;
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.memberIds;
+      allow delete: if false;
+
+      // Session members: each member controls their own doc
+      match /members/{memberId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null
+                              && request.auth.uid == memberId;
+        allow delete: if request.auth != null
+                      && request.auth.uid == memberId;
+      }
+    }
+
+    // Community trails: anyone authenticated can read,
+    // creator can write, anyone can create
+    match /communityTrails/{trailId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.creatorId;
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.creatorId;
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.creatorId;
+
+      // Trail confirmations: each user controls their own confirmation doc
+      match /confirmations/{userId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null
+                              && request.auth.uid == userId;
+        allow delete: if false;
+      }
+
+      // Trail edits: anyone authenticated can propose, creator approves
+      match /edits/{editId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+        allow update: if request.auth != null;
+        allow delete: if false;
+      }
+    }
+
+    // Parks: read-only for clients, system/admin creates
+    match /parks/{parkId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+  }
+}

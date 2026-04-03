@@ -23,9 +23,10 @@ struct RideHistoryView: View {
                         .listRowBackground(Color.trSurface)
                     }
                     .onDelete { indexSet in
+                        let ridesToDelete = indexSet.map { historyVM.rides[$0] }
                         Task {
-                            for index in indexSet {
-                                await historyVM.deleteRide(historyVM.rides[index])
+                            for ride in ridesToDelete {
+                                await historyVM.deleteRide(ride)
                             }
                         }
                     }
@@ -38,6 +39,7 @@ struct RideHistoryView: View {
         .navigationTitle("Ride History")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .task {
+            guard historyVM.rides.isEmpty else { return }
             if let userId = authViewModel.currentUser?.id {
                 await historyVM.loadRides(userId: userId)
             }

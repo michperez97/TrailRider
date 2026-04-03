@@ -45,9 +45,9 @@ final class RideViewModel {
     private let watchService = WatchConnectivityService.shared
     private var timer: Timer?
     private var rideStartTime: Date?
+    private var pausedDuration: TimeInterval = 0
+    private var pauseStartTime: Date?
     private var lastLocation: CLLocation?
-    private var totalSpeedReadings: Double = 0
-    private var speedReadingCount: Int = 0
     private var lastElevation: Double?
 
     // MARK: - Formatted Properties
@@ -100,14 +100,15 @@ final class RideViewModel {
         routeCoordinates = []
         lastLocation = nil
         lastElevation = nil
-        totalSpeedReadings = 0
-        speedReadingCount = 0
+        pausedDuration = 0
+        pauseStartTime = nil
 
         startTimer()
     }
 
     func pauseRide() {
         rideState = .paused
+        pauseStartTime = Date()
         stopTimer()
         locationService.stopTracking()
     }
@@ -115,6 +116,11 @@ final class RideViewModel {
     func resumeRide() {
         rideState = .riding
         locationService.startTracking()
+        if let pauseStart = pauseStartTime {
+            pausedDuration += Date().timeIntervalSince(pauseStart)
+            pauseStartTime = nil
+        }
+        lastLocation = nil
         startTimer()
     }
 
@@ -125,6 +131,9 @@ final class RideViewModel {
         // Build and save ride (skip junk rides under 30s or 0 distance)
         if let userId, let startTime = rideStartTime,
            elapsedSeconds > 30, distanceMiles > 0.01 {
+            let computedAvg = elapsedSeconds > 0
+                ? distanceMiles / (Double(elapsedSeconds) / 3600.0)
+                : 0.0
             let ride = Ride(
                 userId: userId,
                 startTime: startTime,
@@ -132,7 +141,7 @@ final class RideViewModel {
                 durationSeconds: elapsedSeconds,
                 distanceMiles: distanceMiles,
                 maxSpeedMph: maxSpeedMph,
-                avgSpeedMph: avgSpeedMph,
+                avgSpeedMph: computedAvg,
                 elevationGainFeet: elevationGainFeet,
                 routePolyline: routeCoordinates.map {
                     GeoPoint(latitude: $0.latitude, longitude: $0.longitude)
@@ -185,7 +194,7 @@ final class RideViewModel {
 
     private func tick() {
         if let start = rideStartTime {
-            elapsedSeconds = Int(Date().timeIntervalSince(start))
+            elapsedSeconds = Int(Date().timeIntervalSince(start) - pausedDuration)
         }
         updateStats()
         updateHeartRate()
@@ -203,11 +212,8 @@ final class RideViewModel {
             maxSpeedMph = currentSpeedMph
         }
 
-        // Track avg speed
-        if currentSpeedMph > 0 {
-            totalSpeedReadings += currentSpeedMph
-            speedReadingCount += 1
-            avgSpeedMph = totalSpeedReadings / Double(speedReadingCount)
+        if elapsedSeconds > 0 {
+            avgSpeedMph = distanceMiles / (Double(elapsedSeconds) / 3600.0)
         }
 
         // Calculate distance and only append route point on real movement
@@ -257,7 +263,7 @@ final class RideViewModel {
         routeCoordinates = []
         lastLocation = nil
         lastElevation = nil
-        totalSpeedReadings = 0
-        speedReadingCount = 0
+        pausedDuration = 0
+        pauseStartTime = nil
     }
 }

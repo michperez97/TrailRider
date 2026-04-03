@@ -117,32 +117,48 @@ final class CommunityTrailService: Sendable {
 
     // MARK: - Verification Methods
 
-    /// Confirm a trail exists (community verification). Uses WriteBatch for atomicity.
+    /// Confirm a trail exists (community verification) transactionally.
     func confirmTrail(trailId: String, userId: String) async throws {
-        let batch = db.batch()
-
-        // Create confirmation doc with userId as document ID
         let confirmationRef = trailsCollection.document(trailId)
             .collection("confirmations").document(userId)
-        let confirmation = TrailConfirmation(userId: userId, confirmedAt: Date())
-        try batch.setData(from: confirmation, forDocument: confirmationRef)
-
-        // Increment verification count
         let trailRef = trailsCollection.document(trailId)
-        batch.updateData([
-            "verificationCount": FieldValue.increment(Int64(1))
-        ], forDocument: trailRef)
 
-        // Check current count to decide if trail should be marked verified
-        let trailDoc = try await trailRef.getDocument()
-        let currentCount = trailDoc.data()?["verificationCount"] as? Int ?? 0
-        if currentCount + 1 >= 3 {
-            batch.updateData([
-                "isVerified": true
-            ], forDocument: trailRef)
+        try await db.runTransaction { transaction, errorPointer in
+            let confirmDoc: DocumentSnapshot
+            do {
+                confirmDoc = try transaction.getDocument(confirmationRef)
+            } catch let error as NSError {
+                errorPointer?.pointee = error
+                return nil
+            }
+            if confirmDoc.exists { return nil }
+
+            let trailDoc: DocumentSnapshot
+            do {
+                trailDoc = try transaction.getDocument(trailRef)
+            } catch let error as NSError {
+                errorPointer?.pointee = error
+                return nil
+            }
+            let currentCount = trailDoc.data()?["verificationCount"] as? Int ?? 0
+            let newCount = currentCount + 1
+
+            let confirmation = TrailConfirmation(userId: userId, confirmedAt: Date())
+            do {
+                try transaction.setData(from: confirmation, forDocument: confirmationRef)
+            } catch let error as NSError {
+                errorPointer?.pointee = error
+                return nil
+            }
+
+            var updates: [String: Any] = ["verificationCount": newCount]
+            if newCount >= 3 {
+                updates["isVerified"] = true
+            }
+            transaction.updateData(updates, forDocument: trailRef)
+
+            return nil
         }
-
-        try await batch.commit()
     }
 
     /// Check if a user has already confirmed a trail
@@ -158,7 +174,7 @@ final class CommunityTrailService: Sendable {
     /// Submit a proposed edit for a trail
     func submitEdit(_ edit: TrailEdit, trailId: String) async throws {
         let editsCollection = trailsCollection.document(trailId).collection("edits")
-        _ = try editsCollection.addDocument(from: edit)
+        _ = try await editsCollection.addDocument(from: edit)
     }
 
     /// Get all pending edits for a trail
@@ -173,22 +189,26 @@ final class CommunityTrailService: Sendable {
     /// Get all pending edits across all trails owned by a user.
     /// Returns only trails that have at least one pending edit.
     func getPendingEditsForCreator(userId: String) async throws -> [(CommunityTrail, [TrailEdit])] {
-        // First get all the user's published trails
         let snapshot = try await trailsCollection
             .whereField("creatorId", isEqualTo: userId)
             .whereField("status", isEqualTo: CommunityTrail.Status.published.rawValue)
             .getDocuments()
         let trails = snapshot.documents.compactMap { try? $0.data(as: CommunityTrail.self) }
 
-        var results: [(CommunityTrail, [TrailEdit])] = []
-        for trail in trails {
-            guard let trailId = trail.id else { continue }
-            let edits = try await getPendingEdits(trailId: trailId)
-            if !edits.isEmpty {
-                results.append((trail, edits))
+        return try await withThrowingTaskGroup(of: (CommunityTrail, [TrailEdit])?.self) { group in
+            for trail in trails {
+                guard let trailId = trail.id else { continue }
+                group.addTask {
+                    let edits = try await self.getPendingEdits(trailId: trailId)
+                    return edits.isEmpty ? nil : (trail, edits)
+                }
             }
+            var results: [(CommunityTrail, [TrailEdit])] = []
+            for try await result in group {
+                if let result { results.append(result) }
+            }
+            return results
         }
-        return results
     }
 
     /// Approve an edit: apply changes to the trail and mark the edit as approved. Uses WriteBatch.
@@ -251,7 +271,7 @@ final class CommunityTrailService: Sendable {
             createdAt: Date()
         )
 
-        _ = try parksCollection.addDocument(from: ameliaEarhart)
-        _ = try parksCollection.addDocument(from: virginiaKey)
+        _ = try await parksCollection.addDocument(from: ameliaEarhart)
+        _ = try await parksCollection.addDocument(from: virginiaKey)
     }
 }

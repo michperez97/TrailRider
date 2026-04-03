@@ -5,7 +5,7 @@ struct ThemedTextField: View {
     @Binding var text: String
 
     var body: some View {
-        TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(.trTextTertiary))
+        TextField(placeholder, text: $text, prompt: Text(placeholder).foregroundStyle(.trTextTertiary))
             .padding(12)
             .foregroundStyle(.trTextPrimary)
             .background(.trBase)

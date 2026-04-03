@@ -38,6 +38,35 @@ final class UserService: Sendable {
         return snapshot.documents.isEmpty
     }
 
+    func claimUsername(_ username: String, userId: String) async throws {
+        let usernameRef = db.collection("usernames").document(username.lowercased())
+        let userRef = usersCollection.document(userId)
+
+        try await db.runTransaction { transaction, errorPointer in
+            let doc: DocumentSnapshot
+            do {
+                doc = try transaction.getDocument(usernameRef)
+            } catch let error as NSError {
+                errorPointer?.pointee = error
+                return nil
+            }
+
+            if doc.exists {
+                let error = NSError(
+                    domain: "UserService",
+                    code: 409,
+                    userInfo: [NSLocalizedDescriptionKey: "Username is already taken"]
+                )
+                errorPointer?.pointee = error
+                return nil
+            }
+
+            transaction.setData(["userId": userId], forDocument: usernameRef)
+            transaction.updateData(["username": username.lowercased()], forDocument: userRef)
+            return nil
+        }
+    }
+
     /// Check if user document exists
     func userExists(id: String) async throws -> Bool {
         let snapshot = try await usersCollection.document(id).getDocument()

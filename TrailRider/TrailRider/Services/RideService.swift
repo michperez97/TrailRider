@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseAuth
 import FirebaseFirestore
 import CoreLocation
 
@@ -14,7 +15,13 @@ final class RideService: Sendable {
 
     /// Save a new ride
     func saveRide(_ ride: Ride) async throws -> String {
-        let ref = try ridesCollection.addDocument(from: ride)
+        let ref = try await ridesCollection.addDocument(from: ride)
+
+        let userRef = db.collection("users").document(ride.userId)
+        try await userRef.updateData([
+            "totalMiles": FieldValue.increment(ride.distanceMiles)
+        ])
+
         return ref.documentID
     }
 
@@ -35,6 +42,13 @@ final class RideService: Sendable {
 
     /// Delete a ride
     func deleteRide(id: String) async throws {
+        guard let currentUid = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "RideService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+        let snapshot = try await ridesCollection.document(id).getDocument()
+        guard let ownerId = snapshot.data()?["userId"] as? String, ownerId == currentUid else {
+            throw NSError(domain: "RideService", code: 403, userInfo: [NSLocalizedDescriptionKey: "Not authorized to delete this ride"])
+        }
         try await ridesCollection.document(id).delete()
     }
 }

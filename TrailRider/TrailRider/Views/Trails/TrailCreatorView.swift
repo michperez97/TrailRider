@@ -2,7 +2,7 @@ import SwiftUI
 import MapKit
 
 struct TrailCreatorView: View {
-    @State private var vm = TrailCreatorViewModel()
+    @Bindable var vm: TrailCreatorViewModel
     @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {

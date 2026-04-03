@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TrailRider uses your location to track your rides and show your position on the trail map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>TrailRider uses your location in the background to continuously record your ride route while you ride.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

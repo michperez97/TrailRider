@@ -9,8 +9,6 @@ struct AppUser: Codable, Identifiable, Sendable {
     var totalMiles: Double
     var currentStreak: Int
     var isRiding: Bool
-    var lastLatitude: Double?
-    var lastLongitude: Double?
     var shareLocation: Bool
     var createdAt: Date
 
@@ -23,8 +21,6 @@ struct AppUser: Codable, Identifiable, Sendable {
             totalMiles: 0,
             currentStreak: 0,
             isRiding: false,
-            lastLatitude: nil,
-            lastLongitude: nil,
             shareLocation: false,
             createdAt: Date()
         )

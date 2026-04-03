@@ -127,23 +127,18 @@ final class AuthViewModel {
                 return
             }
 
-            let available = try await userService.isUsernameAvailable(trimmed)
-            guard available else {
-                errorMessage = "Username is already taken"
-                return
-            }
-
             let trimmedDisplay = displayName.trimmingCharacters(in: .whitespaces)
             guard !trimmedDisplay.isEmpty else {
                 errorMessage = "Display name cannot be empty"
                 return
             }
 
-            try await userService.updateUser(id: userId, fields: [
-                "username": trimmed.lowercased(),
-                "displayName": trimmedDisplay
-            ])
+            try await userService.claimUsername(trimmed.lowercased(), userId: userId)
+            try await userService.updateUser(id: userId, fields: ["displayName": trimmedDisplay])
 
+            if currentUser == nil {
+                currentUser = try await userService.getUser(id: userId)
+            }
             currentUser?.username = trimmed.lowercased()
             currentUser?.displayName = trimmedDisplay
             authState = .signedIn

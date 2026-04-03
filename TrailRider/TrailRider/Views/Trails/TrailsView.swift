@@ -102,16 +102,18 @@ struct TrailsView: View {
             .navigationTitle("Trails")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: TrailCreatorView()) {
+                    NavigationLink(destination: TrailCreatorView(vm: creatorVM)) {
                         Image(systemName: "plus")
                     }
                 }
             }
             .task {
-                if let userId = authViewModel.currentUser?.id {
+                if let userId = authViewModel.currentUser?.id, creatorVM.drafts.isEmpty {
                     await creatorVM.loadDrafts(userId: userId)
                 }
-                await communityVM.loadAllTrails()
+                if communityVM.communityTrails.isEmpty {
+                    await communityVM.loadAllTrails()
+                }
             }
         }
     }

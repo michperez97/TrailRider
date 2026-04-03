@@ -5,6 +5,13 @@ import FirebaseFirestore
 @MainActor
 final class GroupRideViewModel {
 
+    nonisolated deinit {
+        let session = MainActor.assumeIsolated { sessionListener }
+        let members = MainActor.assumeIsolated { membersListener }
+        session?.remove()
+        members?.remove()
+    }
+
     enum GroupState: Equatable {
         case idle
         case lobby
@@ -129,11 +136,11 @@ final class GroupRideViewModel {
             } else {
                 try await groupService.leaveSession(sessionId: sessionId, userId: userId)
             }
+            stopListening()
+            reset()
         } catch {
             errorMessage = error.localizedDescription
         }
-        stopListening()
-        reset()
     }
 
     // MARK: - Listeners
@@ -170,5 +177,7 @@ final class GroupRideViewModel {
         session = nil
         members = []
         joinCode = ""
+        lastLocationUpdate = .distantPast
+        currentUserId = nil
     }
 }

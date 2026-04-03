@@ -173,10 +173,14 @@ final class TrailCreatorViewModel {
                     createdAt: Date()
                 )
                 let parkId = try await trailService.createPark(newPark)
-                try await trailService.updateTrail(id: trailId, fields: ["parkId": parkId])
+                try await trailService.updateTrail(id: trailId, fields: [
+                    "parkId": parkId,
+                    "status": CommunityTrail.Status.published.rawValue,
+                    "updatedAt": Date()
+                ])
+            } else {
+                try await trailService.publishTrail(id: trailId)
             }
-
-            try await trailService.publishTrail(id: trailId)
 
             if let userId = trail.creatorId as String? {
                 await loadDrafts(userId: userId)

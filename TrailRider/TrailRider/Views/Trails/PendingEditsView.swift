@@ -111,7 +111,11 @@ struct PendingEditsView: View {
             HStack(spacing: 12) {
                 Button {
                     Task {
-                        await vm.approveEdit(trailId: trailId, edit: edit)
+                        await vm.approveEdit(
+                            trailId: trailId,
+                            edit: edit,
+                            userId: authViewModel.currentUser?.id ?? ""
+                        )
                         await vm.loadPendingEdits(userId: authViewModel.currentUser?.id ?? "")
                     }
                 } label: {
@@ -130,7 +134,11 @@ struct PendingEditsView: View {
 
                 Button {
                     Task {
-                        await vm.rejectEdit(trailId: trailId, edit: edit)
+                        await vm.rejectEdit(
+                            trailId: trailId,
+                            edit: edit,
+                            userId: authViewModel.currentUser?.id ?? ""
+                        )
                         await vm.loadPendingEdits(userId: authViewModel.currentUser?.id ?? "")
                     }
                 } label: {
