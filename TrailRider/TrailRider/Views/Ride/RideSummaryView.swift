@@ -12,8 +12,9 @@ struct RideSummaryView: View {
                     if rideVM.routeCoordinates.count > 1 {
                         Map {
                             MapPolyline(coordinates: rideVM.routeCoordinates)
-                                .stroke(.trPrimary, lineWidth: 4)
+                                .stroke(.trRideTrail, lineWidth: 4)
                         }
+                        .mapStyle(.imagery(elevation: .realistic))
                         .frame(height: 250)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .padding(.horizontal)
@@ -24,11 +25,11 @@ struct RideSummaryView: View {
                         GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 16) {
-                        ThemeStatCard(title: "Distance", value: "\(rideVM.formattedDistance) mi", icon: "road.lanes", glowColor: .trPrimary, animationDelay: 0.0)
-                        ThemeStatCard(title: "Duration", value: rideVM.formattedDuration, icon: "clock.fill", glowColor: .trPrimary, animationDelay: 0.1)
-                        ThemeStatCard(title: "Avg Speed", value: "\(rideVM.formattedAvgSpeed) mph", icon: "speedometer", glowColor: .trPrimary, animationDelay: 0.2)
-                        ThemeStatCard(title: "Max Speed", value: "\(rideVM.formattedMaxSpeed) mph", icon: "gauge.with.dots.needle.67percent", glowColor: .trPrimary, animationDelay: 0.3)
-                        ThemeStatCard(title: "Elevation", value: "\(rideVM.formattedElevation) ft", icon: "mountain.2.fill", glowColor: .trPrimary, animationDelay: 0.4)
+                        ThemeStatCard(title: "Distance", value: "\(rideVM.formattedDistance) mi", icon: "road.lanes", glowColor: .trRideTrail, animationDelay: 0.0)
+                        ThemeStatCard(title: "Duration", value: rideVM.formattedDuration, icon: "clock.fill", glowColor: .trRideStone, animationDelay: 0.1)
+                        ThemeStatCard(title: "Avg Speed", value: "\(rideVM.formattedAvgSpeed) mph", icon: "speedometer", glowColor: .trRideSpeed, animationDelay: 0.2)
+                        ThemeStatCard(title: "Max Speed", value: "\(rideVM.formattedMaxSpeed) mph", icon: "gauge.with.dots.needle.67percent", glowColor: .trRideElevation, animationDelay: 0.3)
+                        ThemeStatCard(title: "Elevation", value: "\(rideVM.formattedElevation) ft", icon: "mountain.2.fill", glowColor: .trRideElevation, animationDelay: 0.4)
                     }
                     .padding(.horizontal)
 
