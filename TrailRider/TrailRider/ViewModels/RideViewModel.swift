@@ -20,6 +20,11 @@ final class RideViewModel {
         case satellite
     }
 
+    enum ZoomLevel: String {
+        case normal    // ~500m altitude
+        case closeUp   // ~50-100m altitude, trail detail visible
+    }
+
     // MARK: - State
 
     var rideState: RideState = .idle
@@ -35,6 +40,7 @@ final class RideViewModel {
     var routeCoordinates: [CLLocationCoordinate2D] = []
     var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     var mapStyleSelection: MapStyle = .standard
+    var zoomLevel: ZoomLevel = .normal
 
     // MARK: - Heart Rate (from Watch)
     var heartRate: Double = 0
@@ -86,6 +92,25 @@ final class RideViewModel {
 
     var formattedElevation: String {
         String(format: "%.0f", elevationGainFeet)
+    }
+
+    func recenterOnUser() {
+        guard let location = locationService.currentLocation else {
+            cameraPosition = .userLocation(fallback: .automatic)
+            return
+        }
+        let distance: CLLocationDistance = zoomLevel == .closeUp ? 80 : 500
+        cameraPosition = .camera(MapCamera(
+            centerCoordinate: location.coordinate,
+            distance: distance,
+            heading: location.course >= 0 ? location.course : 0,
+            pitch: zoomLevel == .closeUp ? 45 : 0
+        ))
+    }
+
+    func toggleZoom() {
+        zoomLevel = zoomLevel == .normal ? .closeUp : .normal
+        recenterOnUser()
     }
 
     // MARK: - Controls

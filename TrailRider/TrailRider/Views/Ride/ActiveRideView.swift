@@ -17,6 +17,8 @@ struct ActiveRideView: View {
                     VStack(alignment: .trailing, spacing: 8) {
                         hrBadge
                         mapStyleToggle
+                        zoomToggle
+                        recenterButton
                     }
                 }
                 .padding(.horizontal, 14)
@@ -52,7 +54,6 @@ struct ActiveRideView: View {
             ? .imagery(elevation: .realistic)
             : .standard(elevation: .realistic, emphasis: .muted))
         .mapControls {
-            MapUserLocationButton()
             MapCompass()
         }
     }
@@ -132,6 +133,46 @@ struct ActiveRideView: View {
         .accessibilityLabel(rideVM.mapStyleSelection == .satellite
             ? "Switch to standard map" : "Switch to satellite map")
         .accessibilityValue(rideVM.mapStyleSelection == .satellite ? "Satellite" : "Standard")
+    }
+
+    // MARK: - Zoom Toggle
+
+    private var zoomToggle: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                rideVM.toggleZoom()
+            }
+        } label: {
+            RideOverlayBadge(borderColor: .trRideElevation) {
+                Image(systemName: rideVM.zoomLevel == .normal
+                    ? "plus.magnifyingglass" : "minus.magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.trRideElevation)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(minWidth: 28, minHeight: 28)
+            }
+        }
+        .accessibilityLabel(rideVM.zoomLevel == .normal
+            ? "Switch to close-up view" : "Switch to normal view")
+        .accessibilityValue(rideVM.zoomLevel == .normal ? "Normal" : "Close-up")
+    }
+
+    // MARK: - Recenter Button
+
+    private var recenterButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                rideVM.recenterOnUser()
+            }
+        } label: {
+            RideOverlayBadge(borderColor: .trRideStone) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.trRideStone)
+                    .frame(minWidth: 28, minHeight: 28)
+            }
+        }
+        .accessibilityLabel("Recenter map on current location")
     }
 
     // MARK: - Bottom Panel
