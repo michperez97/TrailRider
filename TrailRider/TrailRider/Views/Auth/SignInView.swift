@@ -12,10 +12,7 @@ struct SignInView: View {
 
             // Logo & branding
             VStack(spacing: 12) {
-                Image(systemName: "bicycle")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.trAccent)
-                    .floatingAnimation()
+                TrailRiderIcon(size: 180)
 
                 HStack(spacing: 0) {
                     Text("TRAIL").foregroundStyle(.trTextPrimary)

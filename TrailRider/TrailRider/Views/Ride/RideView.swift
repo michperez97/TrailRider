@@ -64,13 +64,15 @@ struct PreRideView: View {
                 VStack(spacing: 24) {
                     Spacer()
 
-                    Image(systemName: "bicycle")
-                        .font(.system(size: 60))
-                        .foregroundStyle(.trAccent)
+                    TrailRiderIcon(size: 160)
 
-                    Text("Ready to Ride?")
-                        .font(.title2.bold())
+                    Text("Ready to Ride")
+                        .font(.system(size: 28, weight: .black))
                         .foregroundStyle(.trTextPrimary)
+
+                    Text("Amelia Earhart Park")
+                        .font(.subheadline)
+                        .foregroundStyle(.trTextSecondary)
 
                     // Solo ride
                     Button {

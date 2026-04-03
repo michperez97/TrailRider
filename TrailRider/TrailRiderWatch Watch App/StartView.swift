@@ -5,7 +5,7 @@ struct StartView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "bicycle")
+            Image(systemName: "mountain.2.fill")
                 .font(.system(size: 36))
                 .foregroundStyle(.green)
 
