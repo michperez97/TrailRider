@@ -133,6 +133,7 @@ final class RideViewModel {
     func stopRide(userId: String?) {
         stopTimer()
         locationService.stopTracking()
+        watchService.sendMessageToWatch(["rideEnded": true])
 
         // Build and save ride (skip junk rides under 30s or 0 distance)
         if let userId, let startTime = rideStartTime,
@@ -174,7 +175,41 @@ final class RideViewModel {
     func discardRide() {
         stopTimer()
         locationService.stopTracking()
+        watchService.sendMessageToWatch(["rideEnded": true])
         resetRide()
+    }
+
+    func saveStandaloneWatchRide(_ data: [String: Any], userId: String) async {
+        guard let startTs = data["startTime"] as? TimeInterval,
+              let endTs = data["endTime"] as? TimeInterval,
+              let duration = data["durationSeconds"] as? Int,
+              let distMeters = data["distanceMeters"] as? Double,
+              let coords = data["routeCoordinates"] as? [[String: Double]] else { return }
+
+        let miles = distMeters / 1609.344
+        let avg = duration > 0 ? miles / (Double(duration) / 3600.0) : 0
+
+        let ride = Ride(
+            userId: userId,
+            startTime: Date(timeIntervalSince1970: startTs),
+            endTime: Date(timeIntervalSince1970: endTs),
+            durationSeconds: duration,
+            distanceMiles: miles,
+            maxSpeedMph: 0,
+            avgSpeedMph: avg,
+            elevationGainFeet: 0,
+            routePolyline: coords.compactMap { c in
+                guard let lat = c["lat"], let lon = c["lon"] else { return nil }
+                return GeoPoint(latitude: lat, longitude: lon)
+            },
+            photoURLs: []
+        )
+
+        do {
+            _ = try await rideService.saveRide(ride)
+        } catch {
+            saveError = "Failed to save Watch ride: \(error.localizedDescription)"
+        }
     }
 
     func finishSummary() {
@@ -256,6 +291,85 @@ final class RideViewModel {
         hrZoneName = watchService.hrZoneName
         activeCalories = watchService.activeCalories
         isWatchConnected = watchService.isWatchReachable
+    }
+
+    private func parseDate(from value: Any?) -> Date? {
+        switch value {
+        case let date as Date:
+            return date
+        case let number as NSNumber:
+            return Date(timeIntervalSince1970: number.doubleValue)
+        case let timeInterval as TimeInterval:
+            return Date(timeIntervalSince1970: timeInterval)
+        default:
+            return nil
+        }
+    }
+
+    private func doubleValue(from value: Any?) -> Double {
+        switch value {
+        case let double as Double:
+            return double
+        case let number as NSNumber:
+            return number.doubleValue
+        case let int as Int:
+            return Double(int)
+        default:
+            return 0
+        }
+    }
+
+    private func intValue(from value: Any?) -> Int {
+        switch value {
+        case let int as Int:
+            return int
+        case let number as NSNumber:
+            return number.intValue
+        case let double as Double:
+            return Int(double)
+        default:
+            return 0
+        }
+    }
+
+    private func parseRouteCoordinates(from value: Any?) -> [CLLocationCoordinate2D] {
+        if let coordinates = value as? [[String: Any]] {
+            return coordinates.compactMap { coordinate in
+                guard
+                    let latitude = dictionaryDoubleValue(from: coordinate["latitude"]),
+                    let longitude = dictionaryDoubleValue(from: coordinate["longitude"])
+                else {
+                    return nil
+                }
+
+                return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+            }
+        }
+
+        guard let coordinates = value as? [[AnyHashable: Any]] else { return [] }
+        return coordinates.compactMap { coordinate in
+            guard
+                let latitude = dictionaryDoubleValue(from: coordinate["latitude"]),
+                let longitude = dictionaryDoubleValue(from: coordinate["longitude"])
+            else {
+                return nil
+            }
+
+            return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        }
+    }
+
+    private func dictionaryDoubleValue(from value: Any?) -> Double? {
+        switch value {
+        case let double as Double:
+            return double
+        case let number as NSNumber:
+            return number.doubleValue
+        case let int as Int:
+            return Double(int)
+        default:
+            return nil
+        }
     }
 
     private func resetRide() {

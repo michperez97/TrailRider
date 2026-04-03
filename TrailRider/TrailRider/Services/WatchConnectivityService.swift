@@ -16,6 +16,8 @@ final class WatchConnectivityService: NSObject {
     var isWorkoutActive: Bool = false
     var workoutDidStart: Bool = false
     var workoutDidEnd: Bool = false
+    var hasStandaloneRide: Bool = false
+    var standaloneRideData: [String: Any] = [:]
 
     private var wcSession: WCSession?
 
@@ -28,6 +30,11 @@ final class WatchConnectivityService: NSObject {
         wcSession = WCSession.default
         wcSession?.delegate = self
         wcSession?.activate()
+    }
+
+    func sendMessageToWatch(_ data: [String: Any]) {
+        guard let wcSession, wcSession.isReachable else { return }
+        wcSession.sendMessage(data, replyHandler: nil, errorHandler: nil)
     }
 
     // MARK: - HR Zone Helpers
@@ -113,6 +120,20 @@ extension WatchConnectivityService: WCSessionDelegate {
             if let elapsed = message["elapsedSeconds"] as? Int {
                 watchElapsedSeconds = elapsed
             }
+        }
+    }
+
+    nonisolated func session(
+        _ session: WCSession,
+        didReceiveUserInfo userInfo: [String: Any]
+    ) {
+        Task { @MainActor in
+            guard let standaloneRide = userInfo["standaloneRide"] as? Bool, standaloneRide else {
+                return
+            }
+
+            standaloneRideData = userInfo
+            hasStandaloneRide = true
         }
     }
 }

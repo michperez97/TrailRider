@@ -38,6 +38,15 @@ struct RideView: View {
                 watchService.workoutDidEnd = false
             }
         }
+        .onChange(of: watchService.hasStandaloneRide) { _, hasRide in
+            if hasRide, let userId = authViewModel.currentUser?.id {
+                Task {
+                    await rideVM.saveStandaloneWatchRide(watchService.standaloneRideData, userId: userId)
+                    watchService.hasStandaloneRide = false
+                    watchService.standaloneRideData = [:]
+                }
+            }
+        }
     }
 }
 

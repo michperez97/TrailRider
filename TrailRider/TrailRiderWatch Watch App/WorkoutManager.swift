@@ -2,6 +2,7 @@ import Foundation
 import HealthKit
 import WatchConnectivity
 import SwiftUI
+import CoreLocation
 
 @Observable
 @MainActor
@@ -25,11 +26,15 @@ final class WorkoutManager: NSObject {
 
     // MARK: - Private
     private let healthStore = HKHealthStore()
+    private let locationManager = CLLocationManager()
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
     private var wcSession: WCSession?
     private var timer: Timer?
+    private var gpsTimer: Timer?
     private var lastHRSendTime: Date = .distantPast
+    private var recordedLocations: [(latitude: Double, longitude: Double)] = []
+    private var workoutStartDate: Date?
 
     // HR zone thresholds (default max HR = 190, configurable later)
     private let maxHR: Double = 190
@@ -78,7 +83,14 @@ final class WorkoutManager: NSObject {
     // MARK: - Setup
     override init() {
         super.init()
+        setupLocationManager()
         setupWatchConnectivity()
+    }
+
+    private func setupLocationManager() {
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = kCLDistanceFilterNone
     }
 
     private func setupWatchConnectivity() {
@@ -132,7 +144,10 @@ final class WorkoutManager: NSObject {
             heartRate = 0
             activeCalories = 0
             distance = 0
+            hrZone = 0
             startTimer()
+            workoutStartDate = Date()
+            startGPSSampling()
             sendMessageToPhone(["workoutStarted": true])
         } catch {
             errorMessage = error.localizedDescription
@@ -152,7 +167,10 @@ final class WorkoutManager: NSObject {
     }
 
     func endWorkout() async {
+        guard workoutState == .running || workoutState == .paused else { return }
+
         stopTimer()
+        stopGPSSampling()
         session?.end()
 
         do {
@@ -163,7 +181,10 @@ final class WorkoutManager: NSObject {
         }
 
         workoutState = .ended
-        sendMessageToPhone(["workoutEnded": true])
+        if wcSession?.isReachable == true {
+            sendMessageToPhone(["workoutEnded": true])
+        }
+        syncRideToPhone()
     }
 
     func resetWorkout() {
@@ -173,6 +194,8 @@ final class WorkoutManager: NSObject {
         elapsedSeconds = 0
         distance = 0
         hrZone = 0
+        recordedLocations = []
+        workoutStartDate = nil
         session = nil
         builder = nil
     }
@@ -189,6 +212,30 @@ final class WorkoutManager: NSObject {
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+    }
+
+    private func startGPSSampling() {
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startUpdatingLocation()
+        recordedLocations = []
+        gpsTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.sampleLocation()
+            }
+        }
+    }
+
+    private func stopGPSSampling() {
+        gpsTimer?.invalidate()
+        gpsTimer = nil
+        locationManager.stopUpdatingLocation()
+    }
+
+    private func sampleLocation() {
+        guard let loc = locationManager.location,
+              loc.horizontalAccuracy >= 0,
+              loc.horizontalAccuracy < 30 else { return }
+        recordedLocations.append((latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude))
     }
 
     // MARK: - HR Zone
@@ -220,6 +267,23 @@ final class WorkoutManager: NSObject {
             "distance": distance,
             "elapsedSeconds": elapsedSeconds,
         ])
+    }
+
+    func syncRideToPhone() {
+        guard !recordedLocations.isEmpty,
+              let wcSession,
+              wcSession.activationState == .activated else { return }
+        let rideData: [String: Any] = [
+            "standaloneRide": true,
+            "startTime": workoutStartDate?.timeIntervalSince1970 ?? Date().timeIntervalSince1970,
+            "endTime": Date().timeIntervalSince1970,
+            "durationSeconds": elapsedSeconds,
+            "distanceMeters": distance,
+            "activeCalories": activeCalories,
+            "avgHeartRate": heartRate,
+            "routeCoordinates": recordedLocations.map { ["lat": $0.latitude, "lon": $0.longitude] }
+        ]
+        wcSession.transferUserInfo(rideData)
     }
 }
 
@@ -291,4 +355,31 @@ extension WorkoutManager: WCSessionDelegate {
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {}
+
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        Task { @MainActor in
+            if session.isReachable && workoutState == .ended && !recordedLocations.isEmpty {
+                syncRideToPhone()
+            }
+        }
+    }
+
+    nonisolated func session(
+        _ session: WCSession,
+        didReceiveMessage message: [String: Any]
+    ) {
+        Task { @MainActor in
+            if let rideEnded = message["rideEnded"] as? Bool, rideEnded {
+                if workoutState == .running || workoutState == .paused {
+                    await endWorkout()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - CLLocationManagerDelegate
+extension WorkoutManager: CLLocationManagerDelegate {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {}
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {}
 }
