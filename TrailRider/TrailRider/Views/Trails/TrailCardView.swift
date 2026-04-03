@@ -201,7 +201,7 @@ struct TrailCardView: View {
 
                 // Get Directions button
                 Button {
-                    let mapItem = MKMapItem(coordinate: trail.coordinate)
+                    let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: trail.coordinate))
                     mapItem.name = trail.name
                     mapItem.openInMaps(launchOptions: [
                         MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
