@@ -28,6 +28,7 @@ struct RideHistoryView: View {
                             for ride in ridesToDelete {
                                 await historyVM.deleteRide(ride)
                             }
+                            await authViewModel.refreshCurrentUser()
                         }
                     }
                 }

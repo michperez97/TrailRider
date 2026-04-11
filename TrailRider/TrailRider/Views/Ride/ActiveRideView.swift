@@ -73,7 +73,6 @@ struct ActiveRideView: View {
             }
             UserAnnotation()
 
-            // Ghost rider dot
             if rideVM.isGhostActive, let ghostCoord = rideVM.ghostCoordinate {
                 Annotation("Ghost", coordinate: ghostCoord) {
                     Circle()
@@ -83,14 +82,11 @@ struct ActiveRideView: View {
                 }
             }
         }
-        .mapStyle({
-            let isCloseUp = rideVM.zoomLevel == .closeUp
-            if rideVM.mapStyleSelection == .satellite {
-                return .imagery(elevation: isCloseUp ? .flat : .realistic)
-            } else {
-                return .standard(elevation: isCloseUp ? .flat : .realistic, emphasis: .muted)
-            }
-        }())
+        .mapStyle(
+            rideVM.mapStyleSelection == .satellite
+                ? .imagery(elevation: .realistic)
+                : .standard(elevation: .realistic, emphasis: .muted)
+        )
         .mapControls {
             MapCompass()
         }
@@ -298,3 +294,4 @@ struct ActiveRideView: View {
             .frame(width: 1, height: 30)
     }
 }
+

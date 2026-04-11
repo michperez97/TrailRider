@@ -13,14 +13,15 @@ final class RideService: Sendable {
 
     // MARK: - CRUD
 
-    /// Save a new ride
+    /// Save a new ride (atomic: ride doc + totalMiles update in one batch)
     func saveRide(_ ride: Ride) async throws -> String {
-        let ref = try await ridesCollection.addDocument(from: ride)
-
+        let ref = ridesCollection.document()
         let userRef = db.collection("users").document(ride.userId)
-        try await userRef.updateData([
-            "totalMiles": FieldValue.increment(ride.distanceMiles)
-        ])
+
+        let batch = db.batch()
+        try batch.setData(from: ride, forDocument: ref)
+        batch.updateData(["totalMiles": FieldValue.increment(ride.distanceMiles)], forDocument: userRef)
+        try await batch.commit()
 
         return ref.documentID
     }
@@ -40,15 +41,31 @@ final class RideService: Sendable {
         return try snapshot.data(as: Ride.self)
     }
 
-    /// Delete a ride
+    /// Delete a ride (atomic: remove doc + decrement totalMiles in one batch)
     func deleteRide(id: String) async throws {
         guard let currentUid = Auth.auth().currentUser?.uid else {
             throw NSError(domain: "RideService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
-        let snapshot = try await ridesCollection.document(id).getDocument()
-        guard let ownerId = snapshot.data()?["userId"] as? String, ownerId == currentUid else {
+        let rideRef = ridesCollection.document(id)
+        let snapshot = try await rideRef.getDocument()
+        guard let ride = try? snapshot.data(as: Ride.self), ride.userId == currentUid else {
             throw NSError(domain: "RideService", code: 403, userInfo: [NSLocalizedDescriptionKey: "Not authorized to delete this ride"])
         }
-        try await ridesCollection.document(id).delete()
+
+        let userRef = db.collection("users").document(ride.userId)
+        let batch = db.batch()
+        batch.deleteDocument(rideRef)
+        batch.updateData(["totalMiles": FieldValue.increment(-ride.distanceMiles)], forDocument: userRef)
+        try await batch.commit()
+    }
+
+    /// Check if a ride with the given userId and startTime already exists
+    func rideExists(userId: String, startTime: Date) async throws -> Bool {
+        let snapshot = try await ridesCollection
+            .whereField("userId", isEqualTo: userId)
+            .whereField("startTime", isEqualTo: startTime)
+            .limit(to: 1)
+            .getDocuments()
+        return !snapshot.documents.isEmpty
     }
 }

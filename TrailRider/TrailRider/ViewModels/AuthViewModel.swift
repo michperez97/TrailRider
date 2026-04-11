@@ -67,6 +67,17 @@ final class AuthViewModel {
         }
     }
 
+    // MARK: - Refresh
+
+    func refreshCurrentUser() async {
+        guard let uid = authService.currentUserId else { return }
+        do {
+            currentUser = try await userService.getUser(id: uid)
+        } catch {
+            // Stale data is preferable to a crash — silently keep existing values
+        }
+    }
+
     // MARK: - Sign in with Apple
 
     func handleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {

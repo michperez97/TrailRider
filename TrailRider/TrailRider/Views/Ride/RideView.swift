@@ -44,7 +44,13 @@ struct RideView: View {
                     await rideVM.saveStandaloneWatchRide(watchService.standaloneRideData, userId: userId)
                     watchService.hasStandaloneRide = false
                     watchService.standaloneRideData = [:]
+                    await authViewModel.refreshCurrentUser()
                 }
+            }
+        }
+        .onChange(of: rideVM.isSaving) { wasSaving, isSaving in
+            if wasSaving && !isSaving && rideVM.saveError == nil {
+                Task { await authViewModel.refreshCurrentUser() }
             }
         }
     }

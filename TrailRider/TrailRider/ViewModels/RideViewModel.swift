@@ -46,7 +46,7 @@ final class RideViewModel {
     var ghostDelta: String = ""
     var isGhostActive: Bool { ghostPoints != nil }
 
-    var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    var cameraPosition: MapCameraPosition = .userLocation(followsHeading: true, fallback: .automatic)
     var mapStyleSelection: MapStyle = .standard
     var zoomLevel: ZoomLevel = .normal
 
@@ -104,7 +104,7 @@ final class RideViewModel {
 
     func recenterOnUser() {
         guard let location = locationService.currentLocation else {
-            cameraPosition = .userLocation(fallback: .automatic)
+            cameraPosition = .userLocation(followsHeading: true, fallback: .automatic)
             return
         }
         let distance: CLLocationDistance = zoomLevel == .closeUp ? 80 : 500
@@ -221,12 +221,21 @@ final class RideViewModel {
               let distMeters = data["distanceMeters"] as? Double,
               let coords = data["routeCoordinates"] as? [[String: Double]] else { return }
 
+        let startTime = Date(timeIntervalSince1970: startTs)
+
+        // Deduplicate: skip if a ride with the same user + start time already exists
+        do {
+            if try await rideService.rideExists(userId: userId, startTime: startTime) { return }
+        } catch {
+            // If the check fails, proceed with save — better a duplicate than a lost ride
+        }
+
         let miles = distMeters / 1609.344
         let avg = duration > 0 ? miles / (Double(duration) / 3600.0) : 0
 
         let ride = Ride(
             userId: userId,
-            startTime: Date(timeIntervalSince1970: startTs),
+            startTime: startTime,
             endTime: Date(timeIntervalSince1970: endTs),
             durationSeconds: duration,
             distanceMiles: miles,

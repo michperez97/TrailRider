@@ -22,7 +22,8 @@
       "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -showdestinations)",
       "Bash(xcodebuild -project TrailRider.xcodeproj -scheme TrailRider -destination 'id=00008140-001C15403C6B001C' build)",
       "Bash(npm list:*)",
-      "Bash(npx firebase:*)"
+      "Bash(npx firebase:*)",
+      "Bash(npx firebase-tools:*)"
     ]
   }
 }
