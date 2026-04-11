@@ -2,10 +2,16 @@
 
 Living punch list of work the project needs. Grouped by priority. Date of last update is in git.
 
+**See also:** [`RIDE_PIPELINE_AUDIT.md`](./RIDE_PIPELINE_AUDIT.md) — full save/view trace and bug details from 2026-04-11.
+
 ## P0 — Block trail-ready release
 
+- [ ] **Fix `RideHistoryView` stale cache (Bug #1).** `RideHistoryView.swift:42-47` guards on `historyVM.rides.isEmpty`, so a ride saved in one tab will not appear when you switch back to history in the same app session. See `RIDE_PIPELINE_AUDIT.md` Bug #1 for the 2-line fix (remove guard + add `.refreshable`).
+- [ ] **Fix standalone Watch ride data loss (Bug #2).** `RideViewModel.saveStandaloneWatchRide` hardcodes `maxSpeedMph: 0` and `elevationGainFeet: 0`. Every Watch-standalone ride loses these fields permanently. Needs both phone-side extraction (`RideViewModel.swift:218-249`) and watch-side payload assembly. Details in `RIDE_PIPELINE_AUDIT.md` Bug #2.
+- [ ] **Resolve "blank screen on simulator" mystery.** User reported the simulator launches to a blank/white screen on 2026-04-11. SpringBoard logs confirm the app reaches `running-active-Visible` — not a crash. Most likely `RootView` is stuck in a loading branch waiting on Firebase auth. Need a screenshot and the Xcode console output from ⇧⌘Y to diagnose. See `RIDE_PIPELINE_AUDIT.md` "Simulator launch investigation" section.
+- [ ] **Fix wake lock scene-phase gap.** `ActiveRideView.swift:57-62` sets `isIdleTimerDisabled = true` once in `.task`, but iOS resets it on background→foreground transitions. Add `.onChange(of: scenePhase)` to re-assert on `.active`. Note: Low Power Mode overrides the wake lock entirely — document this. Details in `RIDE_PIPELINE_AUDIT.md`.
 - [ ] **Verify `ActiveRideView` elevation revert is intentional.** Commit `b5b305d` reverted the close-up `.flat` elevation branch that commit `518e64a` introduced to stop 3D buildings from occluding the trail. On actual mountain trails there are no buildings, so this likely does not bite in practice — but confirm on a ride, and if buildings reappear in close-up mode near the trailhead, restore the zoom-aware branch.
-- [ ] **Confirm build is green on physical device.** The batch-write changes to `RideService` compile-check cleanly in Xcode, but run a full device build (`id=00008140-001C15403C6B001C`) before leaving for a ride.
+- [ ] **Confirm build is green on physical device.** The batch-write changes to `RideService` compile-check cleanly in Xcode (verified against generic iOS destination 2026-04-11), but run a full device build (`id=00008140-001C15403C6B001C`) before leaving for a ride.
 - [ ] **End-to-end smoke test the ride flow:** start → pause → resume → save → appears in history → `totalMiles` increments on profile header → delete ride → `totalMiles` decrements. This exercises the new `WriteBatch` paths and the `refreshCurrentUser()` hooks.
 
 ## P1 — Data consistency follow-ups
