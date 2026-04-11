@@ -40,7 +40,11 @@ struct RideHistoryView: View {
         .navigationTitle("Ride History")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .task {
-            guard historyVM.rides.isEmpty else { return }
+            if let userId = authViewModel.currentUser?.id {
+                await historyVM.loadRides(userId: userId)
+            }
+        }
+        .refreshable {
             if let userId = authViewModel.currentUser?.id {
                 await historyVM.loadRides(userId: userId)
             }

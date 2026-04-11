@@ -5,6 +5,7 @@ import UIKit
 struct ActiveRideView: View {
     @Bindable var rideVM: RideViewModel
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -56,6 +57,11 @@ struct ActiveRideView: View {
         .toolbar(.hidden, for: .tabBar)
         .task {
             UIApplication.shared.isIdleTimerDisabled = true
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                UIApplication.shared.isIdleTimerDisabled = true
+            }
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
