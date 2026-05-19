@@ -158,12 +158,14 @@ final class WorkoutManager: NSObject {
         session?.pause()
         workoutState = .paused
         stopTimer()
+        stopGPSSampling()
     }
 
     func resumeWorkout() {
         session?.resume()
         workoutState = .running
         startTimer()
+        resumeGPSSampling()
     }
 
     func endWorkout() async {
@@ -202,8 +204,8 @@ final class WorkoutManager: NSObject {
 
     // MARK: - Timer
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor [weak self] in
                 self?.elapsedSeconds += 1
             }
         }
@@ -218,8 +220,18 @@ final class WorkoutManager: NSObject {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         recordedLocations = []
-        gpsTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        startGPSTimer()
+    }
+
+    private func resumeGPSSampling() {
+        locationManager.startUpdatingLocation()
+        startGPSTimer()
+    }
+
+    private func startGPSTimer() {
+        gpsTimer?.invalidate()
+        gpsTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+            Task { @MainActor [weak self] in
                 self?.sampleLocation()
             }
         }
@@ -232,6 +244,7 @@ final class WorkoutManager: NSObject {
     }
 
     private func sampleLocation() {
+        guard workoutState == .running else { return }
         guard let loc = locationManager.location,
               loc.horizontalAccuracy >= 0,
               loc.horizontalAccuracy < 30 else { return }
@@ -270,8 +283,7 @@ final class WorkoutManager: NSObject {
     }
 
     func syncRideToPhone() {
-        guard !recordedLocations.isEmpty,
-              let wcSession,
+        guard let wcSession,
               wcSession.activationState == .activated else { return }
         let rideData: [String: Any] = [
             "standaloneRide": true,

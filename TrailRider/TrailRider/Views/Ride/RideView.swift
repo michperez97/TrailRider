@@ -3,6 +3,7 @@ import SwiftUI
 struct RideView: View {
     @State private var rideVM = RideViewModel()
     @State private var groupVM = GroupRideViewModel()
+    @State private var isImportingStandaloneRide = false
     @Environment(AuthViewModel.self) private var authViewModel
     private let watchService = WatchConnectivityService.shared
 
@@ -39,19 +40,39 @@ struct RideView: View {
             }
         }
         .onChange(of: watchService.hasStandaloneRide) { _, hasRide in
-            if hasRide, let userId = authViewModel.currentUser?.id {
-                Task {
-                    await rideVM.saveStandaloneWatchRide(watchService.standaloneRideData, userId: userId)
-                    watchService.hasStandaloneRide = false
-                    watchService.standaloneRideData = [:]
-                    await authViewModel.refreshCurrentUser()
-                }
+            if hasRide {
+                importPendingStandaloneRideIfReady()
             }
+        }
+        .onChange(of: authViewModel.currentUser?.id) { _, _ in
+            importPendingStandaloneRideIfReady()
         }
         .onChange(of: rideVM.isSaving) { wasSaving, isSaving in
             if wasSaving && !isSaving && rideVM.saveError == nil {
                 Task { await authViewModel.refreshCurrentUser() }
             }
+        }
+        .task {
+            importPendingStandaloneRideIfReady()
+        }
+    }
+
+    private func importPendingStandaloneRideIfReady() {
+        guard !isImportingStandaloneRide,
+              watchService.hasStandaloneRide,
+              let userId = authViewModel.currentUser?.id else { return }
+
+        isImportingStandaloneRide = true
+        let data = watchService.standaloneRideData
+
+        Task {
+            let didSave = await rideVM.saveStandaloneWatchRide(data, userId: userId)
+            if didSave {
+                watchService.hasStandaloneRide = false
+                watchService.standaloneRideData = [:]
+                await authViewModel.refreshCurrentUser()
+            }
+            isImportingStandaloneRide = false
         }
     }
 }

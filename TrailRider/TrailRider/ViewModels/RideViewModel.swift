@@ -214,45 +214,28 @@ final class RideViewModel {
         resetRide()
     }
 
-    func saveStandaloneWatchRide(_ data: [String: Any], userId: String) async {
-        guard let startTs = data["startTime"] as? TimeInterval,
-              let endTs = data["endTime"] as? TimeInterval,
-              let duration = data["durationSeconds"] as? Int,
-              let distMeters = data["distanceMeters"] as? Double,
-              let coords = data["routeCoordinates"] as? [[String: Double]] else { return }
-
-        let startTime = Date(timeIntervalSince1970: startTs)
+    func saveStandaloneWatchRide(_ data: [String: Any], userId: String) async -> Bool {
+        let ride: Ride
+        do {
+            ride = try StandaloneWatchRidePayload.ride(from: data, userId: userId)
+        } catch {
+            saveError = error.localizedDescription
+            return false
+        }
 
         // Deduplicate: skip if a ride with the same user + start time already exists
         do {
-            if try await rideService.rideExists(userId: userId, startTime: startTime) { return }
+            if try await rideService.rideExists(userId: userId, startTime: ride.startTime) { return true }
         } catch {
             // If the check fails, proceed with save — better a duplicate than a lost ride
         }
 
-        let miles = distMeters / 1609.344
-        let avg = duration > 0 ? miles / (Double(duration) / 3600.0) : 0
-
-        let ride = Ride(
-            userId: userId,
-            startTime: startTime,
-            endTime: Date(timeIntervalSince1970: endTs),
-            durationSeconds: duration,
-            distanceMiles: miles,
-            maxSpeedMph: 0,
-            avgSpeedMph: avg,
-            elevationGainFeet: 0,
-            routePolyline: coords.compactMap { c in
-                guard let lat = c["lat"], let lon = c["lon"] else { return nil }
-                return GeoPoint(latitude: lat, longitude: lon)
-            },
-            photoURLs: []
-        )
-
         do {
             _ = try await rideService.saveRide(ride)
+            return true
         } catch {
             saveError = "Failed to save Watch ride: \(error.localizedDescription)"
+            return false
         }
     }
 
@@ -263,8 +246,8 @@ final class RideViewModel {
     // MARK: - Timer
 
     private func startTimer() {
-        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        let t = Timer(timeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor [weak self] in
                 self?.tick()
             }
         }

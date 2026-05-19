@@ -1,0 +1,99 @@
+---
+last_mapped_commit: ea07f7fb52e9ce61ff56007434d01ca377215f1b
+---
+# Codebase Concerns
+
+**Analysis Date:** 2026-05-06
+
+## High Priority Issues
+
+**Ride history stale cache:**
+- Documented in `TrailRider/docs/TODO.md` and `TrailRider/docs/RIDE_PIPELINE_AUDIT.md`.
+- `TrailRider/TrailRider/Views/Profile/RideHistoryView.swift` guards on an existing ride list, so new rides can be absent after tab switching.
+- Fix by reloading on task without the `rides.isEmpty` guard and adding `.refreshable`.
+
+**Standalone watch ride field loss:**
+- Documented in `TrailRider/docs/TODO.md` and `RIDE_PIPELINE_AUDIT.md`.
+- `TrailRider/TrailRider/ViewModels/RideViewModel.swift` and `TrailRider/TrailRider/Models/StandaloneWatchRidePayload.swift` need to preserve max speed and elevation gain if available.
+- Watch-side payload assembly in `TrailRider/TrailRiderWatch Watch App/WorkoutManager.swift` must send matching keys.
+
+**Simulator blank screen investigation:**
+- Documented as unresolved in `TrailRider/docs/TODO.md`.
+- Suspected root path is `RootView` stuck in `.loading` while Firebase auth state is unresolved.
+- Reproduce with screenshot and Xcode console before changing auth routing.
+
+**Wake lock scene-phase gap:**
+- Documented in `TrailRider/docs/TODO.md`.
+- `TrailRider/TrailRider/Views/Ride/ActiveRideView.swift` sets `UIApplication.shared.isIdleTimerDisabled` on task and clears on disappear; iOS can reset this during background/foreground transitions.
+- Add scene phase handling and document Low Power Mode limitations.
+
+## Data Consistency Risks
+
+**Firestore composite index missing from repo:**
+- `RideService.rideExists(userId:startTime:)` combines `userId` and `startTime`.
+- `TrailRider/docs/TODO.md` notes `firestore.indexes.json` is missing and needs deployment.
+- Until fixed, dedup can fail and fallback can allow duplicate standalone watch rides.
+
+**Client-side aggregate writes:**
+- `RideService.saveRide` increments `users/{uid}.totalMiles` from the client.
+- `TrailRider/docs/TODO.md` calls out Firestore rules hardening so compromised clients cannot inflate stats.
+
+**No local retry queue for failed ride saves:**
+- `RideViewModel.stopRide(userId:)` saves asynchronously and exposes `saveError`, but a failed save can lose the ride unless the user retries through a future flow.
+- Consider durable local pending-save storage before real trail use in weak connectivity.
+
+## Architecture And Maintainability Risks
+
+**Large view model:**
+- `TrailRider/TrailRider/ViewModels/RideViewModel.swift` is about 509 lines and owns ride state, timers, metrics, route conversion, ghost rides, watch import, and persistence.
+- Split only when adding new behavior forces more coupling; likely seams are ride metrics, watch import, and replay/ghost calculations.
+
+**Large watch manager:**
+- `TrailRider/TrailRiderWatch Watch App/WorkoutManager.swift` is about 397 lines and owns HealthKit, timers, GPS sampling, watch connectivity, payload assembly, and delegate callbacks.
+- Payload assembly and HR zone logic are good candidates for extraction into testable helpers.
+
+**Singleton services limit testability:**
+- Services such as `RideService.shared`, `UserService.shared`, and `WatchConnectivityService.shared` are simple but make view-model unit tests difficult.
+- Introduce protocols or injectable service references when adding high-value tests.
+
+**Silent tolerant decoding:**
+- Firestore list reads often use `compactMap { try? $0.data(as: Model.self) }`.
+- This avoids crashes but can hide schema drift. Use explicit logging or metrics for critical collections.
+
+## Security And Privacy Concerns
+
+**Sensitive config files exist locally:**
+- `TrailRider/TrailRider/GoogleService-Info.plist` exists and is ignored.
+- Do not print or commit the contents of Firebase plist files.
+
+**Location and health data:**
+- The app records route, speed, heart rate, calories, and background location.
+- Any feature that shares ride or group location data must respect `AppUser.shareLocation` and Firestore rules.
+
+**Debug bypass:**
+- `TrailRider/TrailRider/ViewModels/AuthViewModel.swift` contains a `#if DEBUG` dev bypass.
+- Keep it DEBUG-only and verify no release configuration can expose fake signed-in state.
+
+## Product Completeness Gaps
+
+**Home view placeholders:**
+- `TrailRider/TrailRider/Views/Home/HomeView.swift` contains TODO/placeholder comments for ride-tab navigation and trail conditions.
+
+**Profile placeholder:**
+- `TrailRider/TrailRider/Views/Profile/ProfileView.swift` has a ride history placeholder comment.
+
+**Bike and trail IDs unused on rides:**
+- `Ride` supports `bikeId` and `trailId`, but current save paths do not populate them.
+
+## Build And Repo Hygiene
+
+**Dirty working tree:**
+- This repo had many pre-existing uncommitted changes before GSD was installed.
+- Avoid broad formatting or project-file rewrites until those changes are reviewed.
+
+**Generated GSD files:**
+- `.codex/` and `.planning/` are generated by this trial. Decide whether to keep, ignore, or remove them before normal app commits.
+
+---
+
+*Concerns map: 2026-05-06*

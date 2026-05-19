@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "unnamed.jpg",
+      "filename" : "trailrider-app-icon-light.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "trailrider-app-icon.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -24,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "trailrider-app-icon.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

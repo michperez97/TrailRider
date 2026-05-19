@@ -84,6 +84,20 @@ struct ProfileView: View {
                     }
                 }
                 .listRowBackground(Color.trSurface)
+
+                Section {
+                    HStack {
+                        Label("App Build", systemImage: "number")
+                            .foregroundStyle(.trTextSecondary)
+                        Spacer()
+                        Text(BuildInfo.displayString)
+                            .fontDesign(.monospaced)
+                            .foregroundStyle(.trTextSecondary)
+                            .textSelection(.enabled)
+                    }
+                    .font(.footnote)
+                }
+                .listRowBackground(Color.trSurface)
             }
             .scrollContentBackground(.hidden)
             .background(.trBase)
