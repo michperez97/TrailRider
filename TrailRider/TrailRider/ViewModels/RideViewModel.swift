@@ -39,6 +39,7 @@ final class RideViewModel {
     var elevationGainFeet: Double = 0
     var routeCoordinates: [CLLocationCoordinate2D] = []
     var recordedRoutePoints: [Ride.RoutePoint] = []
+    var navigationState: TrailNavigationState = .idle
 
     // MARK: - Ghost Ride
     var ghostPoints: [Ride.RoutePoint]?
@@ -63,6 +64,7 @@ final class RideViewModel {
     private let locationService = LocationService.shared
     private let rideService = RideService.shared
     private let watchService = WatchConnectivityService.shared
+    private let trailGraph = TrailGraph.featuredTrailGraph()
     private var timer: Timer?
     private var rideStartTime: Date?
     private var pausedDuration: TimeInterval = 0
@@ -138,6 +140,7 @@ final class RideViewModel {
         elevationGainFeet = 0
         routeCoordinates = []
         recordedRoutePoints = []
+        navigationState = .idle
         lastLocation = nil
         lastElevation = nil
         pausedDuration = 0
@@ -272,7 +275,16 @@ final class RideViewModel {
     // MARK: - Stats Calculation
 
     private func updateStats() {
-        guard let location = locationService.currentLocation else { return }
+        locationService.refreshSignalFreshness()
+
+        guard let location = locationService.currentLocation else {
+            navigationState = RideNavigationEngine.navigationState(
+                for: nil,
+                graph: trailGraph,
+                signalQuality: locationService.signalQuality
+            )
+            return
+        }
 
         currentSpeedMph = locationService.currentSpeed
 
@@ -326,6 +338,11 @@ final class RideViewModel {
         }
 
         lastLocation = location
+        navigationState = RideNavigationEngine.navigationState(
+            for: location,
+            graph: trailGraph,
+            signalQuality: locationService.signalQuality
+        )
     }
 
     private func updateHeartRate() {
@@ -498,6 +515,7 @@ final class RideViewModel {
         elevationGainFeet = 0
         routeCoordinates = []
         recordedRoutePoints = []
+        navigationState = .idle
         ghostPoints = nil
         ghostCurrentIndex = 0
         ghostDelta = ""

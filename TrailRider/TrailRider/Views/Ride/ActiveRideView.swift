@@ -25,6 +25,10 @@ struct ActiveRideView: View {
                 .padding(.horizontal, 14)
                 .padding(.top, 60)
 
+                navigationPanel
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+
                 Spacer()
 
                 // Ghost delta badge
@@ -50,6 +54,12 @@ struct ActiveRideView: View {
                     .padding(.horizontal, 14)
                 }
 
+                if rideVM.navigationState.visibleAheadCoordinates.count > 1 {
+                    TrailAheadRibbonView(navigationState: rideVM.navigationState)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 8)
+                }
+
                 bottomPanel
             }
         }
@@ -73,11 +83,30 @@ struct ActiveRideView: View {
     @ViewBuilder
     private var mapLayer: some View {
         Map(position: $rideVM.cameraPosition) {
+            if rideVM.navigationState.currentSegmentCoordinates.count > 1 {
+                MapPolyline(coordinates: rideVM.navigationState.currentSegmentCoordinates)
+                    .stroke(.trRideStone.opacity(0.55), lineWidth: 3)
+            }
+
+            if rideVM.navigationState.visibleAheadCoordinates.count > 1 {
+                MapPolyline(coordinates: rideVM.navigationState.visibleAheadCoordinates)
+                    .stroke(.trRideTrail, lineWidth: 6)
+            }
+
             if rideVM.routeCoordinates.count > 1 {
                 MapPolyline(coordinates: rideVM.routeCoordinates)
-                    .stroke(.trRideTrail, lineWidth: 4)
+                    .stroke(.trRideSpeed.opacity(0.8), lineWidth: 3)
             }
             UserAnnotation()
+
+            if let matchedCoordinate = rideVM.navigationState.matchedCoordinate {
+                Annotation("Trail match", coordinate: matchedCoordinate) {
+                    Circle()
+                        .fill(Color.trRideTrail)
+                        .frame(width: 9, height: 9)
+                        .shadow(color: .trRideTrail.opacity(0.5), radius: 5)
+                }
+            }
 
             if rideVM.isGhostActive, let ghostCoord = rideVM.ghostCoordinate {
                 Annotation("Ghost", coordinate: ghostCoord) {
@@ -96,6 +125,169 @@ struct ActiveRideView: View {
         .mapControls {
             MapCompass()
         }
+    }
+
+    // MARK: - Navigation Panel
+
+    private var navigationPanel: some View {
+        let state = rideVM.navigationState
+        return RideOverlayBadge(borderColor: navigationBorderColor) {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 8) {
+                    Image(systemName: state.hasTrailMatch ? "point.topleft.down.curvedto.point.bottomright.up" : "location.magnifyingglass")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(navigationBorderColor)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(state.currentTrailName)
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundStyle(.trTextPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+
+                        HStack(spacing: 6) {
+                            if !state.currentDifficulty.isEmpty {
+                                Text(state.currentDifficulty.uppercased())
+                            }
+                            if !state.parkName.isEmpty {
+                                Text(state.parkName)
+                            }
+                            Text(state.statusText)
+                        }
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.trRideStone)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    if state.hasTrailMatch {
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(state.progressPercentText)
+                                .font(.system(size: 13, weight: .black, design: .rounded))
+                                .foregroundStyle(navigationBorderColor)
+                                .monospacedDigit()
+                            Text("\(state.remainingSegmentText) left")
+                                .font(.system(size: 9, weight: .black, design: .rounded))
+                                .foregroundStyle(.trRideLabel)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                    }
+                }
+
+                if state.hasTrailMatch {
+                    segmentProgressBar(progress: state.directionalProgressFraction)
+                }
+
+                if let cue = state.cue {
+                    HStack(spacing: 7) {
+                        Image(systemName: cue.iconName)
+                            .font(.caption.bold())
+                            .foregroundStyle(navigationBorderColor)
+                            .frame(width: 18)
+
+                        Text(cue.title)
+                            .font(.caption.bold())
+                            .foregroundStyle(.trTextPrimary)
+                            .lineLimit(1)
+
+                        Text(cue.detail)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.trRideStone)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+
+                        Spacer(minLength: 6)
+
+                        if !cue.distanceText.isEmpty {
+                            Text(cue.distanceText)
+                                .font(.caption.bold())
+                                .foregroundStyle(navigationBorderColor)
+                                .monospacedDigit()
+                        }
+                    }
+                }
+
+                if !state.upcomingForkChoices.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(state.upcomingForkChoices.prefix(2))) { choice in
+                            HStack(spacing: 7) {
+                                Image(systemName: choice.direction.iconName)
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(navigationBorderColor)
+                                    .frame(width: 18)
+
+                                Text(choice.trailName)
+                                    .font(.caption.weight(.heavy))
+                                    .foregroundStyle(.trTextPrimary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
+
+                                Spacer(minLength: 6)
+
+                                Text(choice.direction.label.uppercased())
+                                    .font(.system(size: 10, weight: .black, design: .rounded))
+                                    .foregroundStyle(navigationBorderColor)
+                                    .lineLimit(1)
+
+                                if !choice.difficulty.isEmpty {
+                                    Text(choice.difficulty.uppercased())
+                                        .font(.system(size: 10, weight: .black, design: .rounded))
+                                        .foregroundStyle(.trRideStone)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.7)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 1)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(navigationAccessibilityLabel)
+    }
+
+    private var navigationBorderColor: Color {
+        if let kind = rideVM.navigationState.cue?.kind {
+            return kind.accentColor
+        }
+        switch rideVM.navigationState.confidence {
+        case .high, .medium:
+            return .trRideTrail
+        case .low:
+            return .trWarning
+        case .offRoute:
+            return .trDestructive
+        case .unknown:
+            return .trRideStone
+        }
+    }
+
+    private var navigationAccessibilityLabel: String {
+        let state = rideVM.navigationState
+        if let cue = state.cue {
+            return "\(state.currentTrailName). \(state.statusText). \(cue.title). \(cue.detail) \(cue.distanceText)"
+        }
+        return "\(state.currentTrailName). \(state.statusText)"
+    }
+
+    private func segmentProgressBar(progress: Double) -> some View {
+        GeometryReader { proxy in
+            let clampedProgress = min(max(progress, 0), 1)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.trRideBorder.opacity(0.8))
+                Capsule()
+                    .fill(navigationBorderColor)
+                    .frame(width: proxy.size.width * clampedProgress)
+            }
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
     }
 
     // MARK: - Speed Badge
@@ -300,4 +492,3 @@ struct ActiveRideView: View {
             .frame(width: 1, height: 30)
     }
 }
-

@@ -10,6 +10,8 @@ final class LocationService: NSObject {
     var currentLocation: CLLocation?
     var currentSpeed: Double = 0 // mph
     var isAuthorized = false
+    var signalQuality: LocationSignalQuality = .unknown
+    var lastLocationUpdateAt: Date?
 
     private let locationManager = CLLocationManager()
 
@@ -44,6 +46,17 @@ final class LocationService: NSObject {
         locationManager.stopUpdatingLocation()
         locationManager.allowsBackgroundLocationUpdates = false
     }
+
+    func refreshSignalFreshness(now: Date = Date()) {
+        guard let lastLocationUpdateAt else {
+            signalQuality = .unknown
+            return
+        }
+
+        if now.timeIntervalSince(lastLocationUpdateAt) > 12 {
+            signalQuality = .stale
+        }
+    }
 }
 
 // MARK: - CLLocationManagerDelegate
@@ -62,6 +75,9 @@ extension LocationService: @preconcurrency CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
 
+        lastLocationUpdateAt = location.timestamp
+        updateSignalQuality(for: location)
+
         // Filter out inaccurate readings
         guard location.horizontalAccuracy >= 0 && location.horizontalAccuracy < 30 else { return }
 
@@ -77,5 +93,23 @@ extension LocationService: @preconcurrency CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location error: \(error.localizedDescription)")
+        signalQuality = .weak
+    }
+
+    private func updateSignalQuality(for location: CLLocation) {
+        guard location.horizontalAccuracy >= 0 else {
+            signalQuality = .weak
+            return
+        }
+
+        if abs(location.timestamp.timeIntervalSinceNow) > 12 {
+            signalQuality = .stale
+        } else if location.horizontalAccuracy <= 12 {
+            signalQuality = .strong
+        } else if location.horizontalAccuracy < 30 {
+            signalQuality = .usable
+        } else {
+            signalQuality = .weak
+        }
     }
 }
