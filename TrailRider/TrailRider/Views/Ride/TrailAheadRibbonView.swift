@@ -86,7 +86,7 @@ struct TrailAheadRibbonView: View {
     }
 
     private var cueColor: Color {
-        navigationState.cue?.kind?.accentColor ?? .trRideStone
+        navigationState.cue?.kind.accentColor ?? .trRideStone
     }
 
     private var cueDetail: String {
