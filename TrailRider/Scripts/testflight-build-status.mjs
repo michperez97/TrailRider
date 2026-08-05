@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-// Answers "is the build I just uploaded actually installable?" without opening
-// App Store Connect. Apple accepts an upload immediately but processes it for
-// ~5-30 minutes; only processingState VALID means testers can install it.
+// Answers "is the build I just uploaded actually available to an internal
+// tester?" without opening App Store Connect. Apple accepts an upload
+// immediately, but processingState VALID is only the first gate: the build must
+// also belong to an internal group that contains at least one tester.
 //
 // Credentials come from .testflight.env (gitignored) or the environment:
 //   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID,
@@ -73,9 +74,14 @@ function mintToken({ keyId, issuerId, privateKey }) {
   return `${signingInput}.${signature.toString('base64url')}`
 }
 
-async function get(path, token) {
+async function request(path, token, options = {}) {
   const response = await fetch(`${API}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers,
+    },
   })
 
   if (!response.ok) {
@@ -83,8 +89,13 @@ async function get(path, token) {
     throw new Error(`${response.status} ${response.statusText} for ${path}\n${body}`)
   }
 
+  if (response.status === 204) return undefined
   return response.json()
 }
+
+const get = (path, token) => request(path, token)
+const post = (path, token, body) =>
+  request(path, token, { method: 'POST', body: JSON.stringify(body) })
 
 const credentials = loadCredentials()
 const token = mintToken({
@@ -123,18 +134,219 @@ if (builds.data.length === 0) {
   process.exit(0)
 }
 
+let betaGroups = await get(
+  `/v1/apps/${app.id}/betaGroups?fields[betaGroups]=name,isInternalGroup,hasAccessToAllBuilds&limit=200`,
+  token,
+)
+
+let internalGroups = betaGroups.data.filter((group) => group.attributes.isInternalGroup)
+
+if (process.argv.includes('--configure-internal-testing')) {
+  const emailArgument = process.argv.find((argument) => argument.startsWith('--tester-email='))
+  const requestedEmail = emailArgument?.slice('--tester-email='.length).toLowerCase()
+  const eligibleRoles = new Set([
+    'ACCOUNT_HOLDER',
+    'ADMIN',
+    'APP_MANAGER',
+    'DEVELOPER',
+    'MARKETING',
+  ])
+  const users = await get(
+    '/v1/users?fields[users]=username,firstName,lastName,roles,allAppsVisible&include=visibleApps&limit=200&limit[visibleApps]=50',
+    token,
+  )
+  const eligibleUsers = users.data.filter((user) => {
+    const canTest = user.attributes.roles.some((role) => eligibleRoles.has(role))
+    const canSeeApp =
+      user.attributes.allAppsVisible ||
+      user.relationships?.visibleApps?.data?.some(({ id }) => id === app.id)
+    return canTest && canSeeApp
+  })
+  const matchingUsers = requestedEmail
+    ? eligibleUsers.filter(
+        (user) => user.attributes.username.toLowerCase() === requestedEmail,
+      )
+    : eligibleUsers.filter((user) => user.attributes.roles.includes('ACCOUNT_HOLDER'))
+
+  if (matchingUsers.length !== 1) {
+    console.error('Could not choose exactly one internal tester.')
+    console.error('Re-run with --tester-email=<App Store Connect username>.')
+    console.error('\nEligible users:')
+    for (const user of eligibleUsers) {
+      console.error(`  ${user.attributes.firstName} ${user.attributes.lastName} <${user.attributes.username}>`)
+    }
+    process.exit(1)
+  }
+
+  const selectedUser = matchingUsers[0]
+  let internalGroup = internalGroups[0]
+
+  if (!internalGroup) {
+    const created = await post('/v1/betaGroups', token, {
+      data: {
+        type: 'betaGroups',
+        attributes: {
+          name: 'Internal Testers',
+          isInternalGroup: true,
+          hasAccessToAllBuilds: true,
+          feedbackEnabled: true,
+        },
+        relationships: {
+          app: { data: { type: 'apps', id: app.id } },
+        },
+      },
+    })
+    internalGroup = created.data
+    console.log(`Created automatic internal group: ${internalGroup.attributes.name}`)
+  }
+
+  let groupTesters = await get(
+    `/v1/betaGroups/${internalGroup.id}/betaTesters?fields[betaTesters]=firstName,lastName,email&limit=200`,
+    token,
+  )
+  let assignedTester = groupTesters.data.find(
+    (tester) => tester.attributes.email.toLowerCase() === selectedUser.attributes.username.toLowerCase(),
+  )
+
+  if (!assignedTester) {
+    try {
+      await post('/v1/betaTesters', token, {
+        data: {
+          type: 'betaTesters',
+          attributes: {
+            email: selectedUser.attributes.username,
+            firstName: selectedUser.attributes.firstName,
+            lastName: selectedUser.attributes.lastName,
+          },
+          relationships: {
+            betaGroups: {
+              data: [{ type: 'betaGroups', id: internalGroup.id }],
+            },
+          },
+        },
+      })
+    } catch (error) {
+      // Apple may return 409 when an existing betaTester record is enrolled.
+      // Treat it as success only if the relationship appeared anyway.
+      if (!error.message.startsWith('409 ')) throw error
+    }
+
+    groupTesters = await get(
+      `/v1/betaGroups/${internalGroup.id}/betaTesters?fields[betaTesters]=firstName,lastName,email&limit=200`,
+      token,
+    )
+    assignedTester = groupTesters.data.find(
+      (tester) => tester.attributes.email.toLowerCase() === selectedUser.attributes.username.toLowerCase(),
+    )
+    if (!assignedTester) {
+      throw new Error('Apple did not add the selected user to the internal testing group.')
+    }
+  }
+  console.log(`Internal tester ready: ${selectedUser.attributes.firstName} ${selectedUser.attributes.lastName}`)
+
+  betaGroups = await get(
+    `/v1/apps/${app.id}/betaGroups?fields[betaGroups]=name,isInternalGroup,hasAccessToAllBuilds&limit=200`,
+    token,
+  )
+  internalGroups = betaGroups.data.filter((group) => group.attributes.isInternalGroup)
+}
+
+const groupAccess = await Promise.all(
+  internalGroups.map(async (group) => {
+    const [groupBuilds, groupTesters] = await Promise.all([
+      get(`/v1/betaGroups/${group.id}/relationships/builds?limit=200`, token),
+      get(
+        `/v1/betaGroups/${group.id}/betaTesters?fields[betaTesters]=firstName,lastName,email,inviteType,state&limit=200`,
+        token,
+      ),
+    ])
+
+    return {
+      group,
+      buildIds: new Set(groupBuilds.data.map(({ id }) => id)),
+      testerCount: groupTesters.data.length,
+      testers: groupTesters.data,
+    }
+  }),
+)
+
+if (process.argv.includes('--resend-internal-invitations')) {
+  const pendingTesters = groupAccess.flatMap(({ testers }) =>
+    testers.filter(({ attributes }) =>
+      ['NOT_INVITED', 'INVITED'].includes(attributes.state),
+    ),
+  )
+
+  if (pendingTesters.length === 0) {
+    console.log('No pending internal tester invitations to resend.')
+  } else {
+    for (const tester of pendingTesters) {
+      await post('/v1/betaTesterInvitations', token, {
+        data: {
+          type: 'betaTesterInvitations',
+          relationships: {
+            app: { data: { type: 'apps', id: app.id } },
+            betaTester: { data: { type: 'betaTesters', id: tester.id } },
+          },
+        },
+      })
+      console.log(
+        `Resent TestFlight invitation to ${tester.attributes.firstName} ${tester.attributes.lastName}`,
+      )
+    }
+  }
+}
+
 console.log(`${app.attributes.name} (${BUNDLE_ID})\n`)
 
 for (const build of builds.data) {
   const { version, processingState, uploadedDate, expired } = build.attributes
-  const status =
-    processingState === 'VALID'
-      ? expired
-        ? 'expired'
-        : 'installable'
-      : processingState.toLowerCase()
+  const accessibleGroups = groupAccess.filter(
+    ({ group, buildIds }) =>
+      group.attributes.hasAccessToAllBuilds || buildIds.has(build.id),
+  )
+  const testerCount = accessibleGroups.reduce(
+    (total, { testerCount: count }) => total + count,
+    0,
+  )
+  const accessibleTesters = accessibleGroups.flatMap(({ testers }) => testers)
+  const acceptedTesterCount = accessibleTesters.filter(({ attributes }) =>
+    ['ACCEPTED', 'INSTALLED'].includes(attributes.state),
+  ).length
+  const invitedTesterCount = accessibleTesters.filter(
+    ({ attributes }) => attributes.state === 'INVITED',
+  ).length
+
+  let status = processingState.toLowerCase()
+  if (processingState === 'VALID') {
+    if (expired) status = 'expired'
+    else if (accessibleGroups.length === 0) status = 'not assigned to an internal group'
+    else if (testerCount === 0) status = 'internal group has no testers'
+    else if (acceptedTesterCount > 0) {
+      status = `available to ${acceptedTesterCount} accepted internal tester${acceptedTesterCount === 1 ? '' : 's'}`
+    } else if (invitedTesterCount > 0) {
+      status = `invitation pending for ${invitedTesterCount} internal tester${invitedTesterCount === 1 ? '' : 's'}`
+    } else {
+      status = 'internal tester is not ready'
+    }
+  }
 
   console.log(`  build ${version.padEnd(6)} ${uploadedDate}  ${processingState} — ${status}`)
+}
+
+if (internalGroups.length === 0) {
+  console.log('\nNo internal testing group exists for this app.')
+  console.log('App Store Connect → TrailRider_ios → TestFlight → Internal Testing → +')
+} else {
+  console.log('\nInternal testing groups:')
+  for (const { group, testerCount, testers } of groupAccess) {
+    const automatic = group.attributes.hasAccessToAllBuilds ? ', automatic builds' : ''
+    console.log(`  ${group.attributes.name}: ${testerCount} tester${testerCount === 1 ? '' : 's'}${automatic}`)
+    for (const tester of testers) {
+      const { firstName, lastName, state } = tester.attributes
+      console.log(`    ${firstName} ${lastName}: ${state ?? 'no invitation state'}`)
+    }
+  }
 }
 
 const latest = builds.data[0].attributes

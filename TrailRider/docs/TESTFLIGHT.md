@@ -10,16 +10,37 @@ is no separate export step for it.
 
 ```sh
 TrailRider/Scripts/upload-internal-testflight.sh
-node TrailRider/Scripts/testflight-build-status.mjs   # VALID = installable
+node TrailRider/Scripts/testflight-build-status.mjs   # verifies build + group + tester
 ```
 
 "Upload accepted" only means Apple took the bytes. Processing can still fail, so
 always run the status check afterwards.
 
-## One-time setup still outstanding
+The status command checks all three gates: processing, internal-group build
+access, and tester membership. If the app has no internal group yet, configure
+automatic distribution and add the account holder with:
 
-**The App Store Connect app record does not exist yet.** Everything else is
-done. Create it once, then uploads work from the command line forever after.
+```sh
+node TrailRider/Scripts/testflight-build-status.mjs --configure-internal-testing
+```
+
+If the account holder is not the intended tester, add
+`--tester-email=name@example.com` for another eligible App Store Connect user.
+Testers must open Apple's invitation using the same Apple Account as the
+TestFlight app. To resend a pending invitation:
+
+```sh
+node TrailRider/Scripts/testflight-build-status.mjs --resend-internal-invitations
+```
+
+## App Store Connect setup
+
+The `TrailRider_ios` App Store Connect record and its automatic `Internal
+Testers` group were created on 2026-08-05. The account holder is assigned as an
+internal tester, so new internal-only builds become available after processing.
+
+The values below are retained as a recovery reference; do not create a duplicate
+app record.
 
 The App IDs are already registered (an archive on 2026-08-05 created them via
 `-allowProvisioningUpdates`), so the bundle ID now appears in the dropdown.
@@ -40,9 +61,9 @@ bundle ID. Nutri_app hit exactly this and ships as "Nutri: Food & Health Coach"
 under the bundle ID `com.crocobyte.nutriapp`. The name stays editable until the
 first public App Store submission.
 
-Then **TestFlight → Internal Testing → +** to create a group and add yourself as
-a tester. Uploads succeed and process without this, but nobody can install until
-a tester is assigned.
+If the internal group is ever removed, recreate it in **TestFlight → Internal
+Testing → +** or with the configuration command above. Uploads succeed and
+process without a group, but nobody can install until a tester is assigned.
 
 ## Credentials
 
