@@ -6,5 +6,9 @@
 	<string>TrailRider reads your heart rate and workout data to display live stats during rides.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>TrailRider saves your cycling workouts and heart rate data to Apple Health.</string>
+	<!-- The watch app is its own bundle and needs its own compliance
+	     declaration; it does not inherit the iPhone app's. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

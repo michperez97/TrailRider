@@ -10,5 +10,14 @@
 	<array>
 		<string>location</string>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>TrailRider reads your heart rate and workout data to display live stats during rides.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>TrailRider saves your cycling workouts and heart rate data to Apple Health.</string>
+	<!-- TrailRider adds no encryption beyond what iOS provides, so declaring
+	     this up front stops every TestFlight build from stalling on a manual
+	     export-compliance question. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

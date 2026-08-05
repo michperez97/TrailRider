@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+
+	<!-- Hand the archive straight to App Store Connect instead of writing an
+	     .ipa to disk for a separate altool run. -->
+	<key>destination</key>
+	<string>upload</string>
+
+	<key>teamID</key>
+	<string>M98LTD3FJJ</string>
+
+	<!-- Internal testers only, so the build skips the Beta App Review queue
+	     and becomes installable as soon as processing finishes. -->
+	<key>testFlightInternalTestingOnly</key>
+	<true/>
+
+	<!-- App Store Connect assigns build numbers. Never bump
+	     CURRENT_PROJECT_VERSION by hand to match a TestFlight build. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<true/>
+
+	<key>signingStyle</key>
+	<string>automatic</string>
+
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>
